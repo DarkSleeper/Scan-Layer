@@ -75,22 +75,45 @@ int main(int argc, char* argv[]) {
 	auto triangle_indexes = my_model.getTriangleIndexes();
 	int triangle_num = triangle_indexes.size() / 3;
 	auto vertices = my_model.getOriginVertices();
+	auto normals = my_model.getNormals();
 
 	//mat //todo: move into loop
 	int width, height;
 	glfwGetFramebufferSize(window, &width, &height);
 	auto aspect = (float)width / (float)height;
-	glm::mat4 view_to_clip_mat = glm::perspective(toRadians(45.f), aspect, 0.01f, 1000.f);
+	glm::mat4 view_to_clip_mat = glm::perspective(toRadians(45.f), aspect, 1.f, 100.f); //for debug, todo: near-far:=0.1-1000
 	glm::mat4 model_mat;
 	model_mat = glm::identity<glm::mat4>();
 	//fixed view
 	glm::mat4 world_to_view_mat = camera.GetViewMatrix();
 
+	/*vertices.clear();
+	vertex_num = 3;
+	vertices.push_back({0,0,0});
+	vertices.push_back({1,1,1});
+	vertices.push_back({-1,-1,-1});*/
 	std::vector<glm::vec3> screen_vertices(vertex_num);
 	for (int i = 0; i < vertex_num; i++) {
 		auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
 		screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
 	}
+	std::vector<glm::vec4> colors(vertex_num);
+	for (int i = 0; i < vertex_num; i++) {
+		auto norm = normals[i];
+		glm::normalize(norm);
+		auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
+		colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
+	}
+
+	//todo: add to table
+
+
+	//todo: z-buffer algorithm and img output
+
+
+
+
+
 
 	//image
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
