@@ -6,6 +6,7 @@
 #include <vector>
 #include "loader/model_loader.h"
 #include "tool/camera.h"
+#include "scan/scan.h"
 
 #define SCR_WIDTH 1960
 #define SCR_HEIGHT 1080
@@ -106,7 +107,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	//todo: add to table
-
+	Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
+	scanner.init(triangle_indexes, screen_vertices, colors);
 
 	//todo: z-buffer algorithm and img output
 

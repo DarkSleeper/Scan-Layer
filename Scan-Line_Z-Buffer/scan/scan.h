@@ -44,9 +44,12 @@ struct AEL_Node {
 
 struct Scanner {
 public:
+	Scanner(int screen_width, int screen_height);
 	void init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors);
 
 private:
+	int width;
+	int height;
 	std::vector<std::vector<PT_Node>> poly_table;
 	std::vector<std::vector<ET_Node>> edge_table;
 };
