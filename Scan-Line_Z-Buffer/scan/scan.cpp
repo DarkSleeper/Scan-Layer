@@ -71,8 +71,8 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 	int triangle_num = triangle_indexes.size() / 3;
 	for (int i = 0; i < triangle_num; i++) {
 		int _a = triangle_indexes[3 * i];
-		int _b = triangle_indexes[3 * i+1];
-		int _c = triangle_indexes[3 * i+2];
+		int _b = triangle_indexes[3 * i + 1];
+		int _c = triangle_indexes[3 * i + 2];
 		if (_a == _b || _a == _c || _b == _c) continue;
 		if (!is_valid[_a] || !is_valid[_b] || !is_valid[_c]) continue; //todo: clip, 先简单把有在范围外的点的三角形整个排除
 		auto p1 = vertices[_a];
@@ -200,7 +200,6 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 	for (int cur_y = height; cur_y > 0; cur_y--) {
 		std::vector<glm::vec4> line_color(width, background_color);
 		std::vector<float> line_z(width, scale_z); //0<=z<=scale_z
-
 		//add new poly
 		if (poly_table[cur_y].size() > 0) {
 			for (auto& iter: poly_table[cur_y]) {
@@ -235,6 +234,8 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 			float zx = ae.zl - (ae.xl - (int)ae.xl) * ae.dzx;
 			for (float x = ae.xl; x < ae.xr; x++) {
 				int idx = x;
+				if (idx >= width) break;
+				if (idx < 0) continue;
 				if (zx < line_z[idx]) {
 					line_z[idx] = zx;
 					line_color[idx] = alive_poly_list[ae.id].color;
@@ -297,7 +298,7 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 		}
 
 		for (int i = 0; i < width; i++) {
-			auto idx = (height - cur_y) * width + i;
+			auto idx = (cur_y - 1) * width + i;
 			frame_buffer[idx * 4 + 0] = (unsigned char)(line_color[i].r);
 			frame_buffer[idx * 4 + 1] = (unsigned char)(line_color[i].g);
 			frame_buffer[idx * 4 + 2] = (unsigned char)(line_color[i].b);

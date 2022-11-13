@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
 
 	//todo: z-buffer algorithm and img output
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
-	scanner.update(img_data, glm::vec4(64, 64, 64, 255));
+	scanner.update(img_data, glm::vec4(0, 0, 0, 255));
 
 	//image
 	GLuint texture;
