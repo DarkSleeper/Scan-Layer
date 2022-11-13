@@ -52,6 +52,7 @@ public:
 private:
 	int width;
 	int height;
+	int scale_z;
 	std::vector<std::unordered_map<size_t, PT_Node>> poly_table;
 	std::vector<std::unordered_map<size_t, std::vector<ET_Node>>> edge_table;
 };

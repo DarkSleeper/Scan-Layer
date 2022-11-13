@@ -5,6 +5,7 @@ Scanner::Scanner(int screen_width, int screen_height)
 {
 	width = screen_width;
 	height = screen_height;
+	scale_z = (width + height) / 2;
 	poly_table.resize(screen_height);
 	edge_table.resize(screen_height);
 }
@@ -22,7 +23,6 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 	};
 	int vertex_num = vertices.size();
 	std::vector<bool> is_valid(vertex_num, false);
-	int scale_z = (width + height) / 2;
 	for (int i = 0; i < vertex_num; i++) {
 		if (in_bound(vertices[i])) is_valid[i] = true;
 		vertices[i].x = (vertices[i].x + 1) / 2.0f * width;
