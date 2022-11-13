@@ -1,13 +1,15 @@
 #include "scan.h"
+#include <algorithm>
 #include <math.h>
+#include <list>
 
 Scanner::Scanner(int screen_width, int screen_height) 
 {
 	width = screen_width;
 	height = screen_height;
 	scale_z = (width + height) / 2;
-	poly_table.resize(screen_height);
-	edge_table.resize(screen_height);
+	poly_table.resize(screen_height + 1);
+	edge_table.resize(screen_height + 1);
 }
 
 size_t Scanner::get_id() {
@@ -91,7 +93,8 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		poly.dy = poly_ymax - poly_ymin;
 		if (poly.dy <= 0)continue;
 		poly.id = id;
-		poly.color = (colors[_a] + colors[_b] + colors[_c]) / 3.0f;
+		//poly.color = (colors[_a] + colors[_b] + colors[_c]) / 3.0f;
+		poly.color = glm::vec4(poly.id * 20);
 
 		ET_Node edge[3];
 		int y1 = (int)p1.y;
@@ -163,13 +166,135 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 	}
 }
 
+
+bool edge_cmp(ET_Node const& a, ET_Node const& b) {
+	if (abs(a.x - b.x) < 1) {
+		return a.dx < b.dx;
+	} else {
+		return a.x < b.x;
+	}
+}
+
+AEL_Node create_alive_edge(ET_Node const& e1, ET_Node const& e2, PT_Node const& poly, float cur_y) {
+	auto alive_edge = AEL_Node();
+	alive_edge.xl = e1.x;
+	alive_edge.dxl = e1.dx;
+	alive_edge.dyl = e1.dy;
+	alive_edge.xr = e2.x;
+	alive_edge.dxr = e2.dx;
+	alive_edge.dyr = e2.dy;
+	alive_edge.zl = -1.0f / poly.c * (poly.a * e1.x + poly.b * cur_y + poly.d);
+	alive_edge.dzx = -1.0f * poly.a / poly.c;
+	alive_edge.dzy = poly.b / poly.c;
+	alive_edge.id = poly.id;
+	return alive_edge;
+}
+
+//vector<map<size_t, PT_Node>> poly_table;
+//vector<map<size_t, vector<ET_Node>>> edge_table;
 void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 {
+	std::unordered_map<size_t, APL_Node> alive_poly_list;
+	std::list<AEL_Node> alive_edge_list;
+
 	for (int cur_y = height; cur_y > 0; cur_y--) {
 		std::vector<glm::vec4> line_color(width, background_color);
 		std::vector<float> line_z(width, 0); //0<=z<=scale_z
 
+		//add new poly
+		if (poly_table[cur_y].size() > 0) {
+			for (auto& iter: poly_table[cur_y]) {
+				auto& id = iter.first;
+				auto& poly = iter.second;
+				auto alive_poly = APL_Node();
+				alive_poly.a = poly.a;
+				alive_poly.b = poly.b;
+				alive_poly.c = poly.c;
+				alive_poly.d = poly.d;
+				alive_poly.id = poly.id;
+				alive_poly.color = poly.color;
+				alive_poly.dy = poly.dy;
+				alive_poly_list[id] = alive_poly;
 
+				//add new edge
+				auto& edges = edge_table[cur_y][id];
+				//按x坐标排序, x相同时，dx更大的在右边
+				std::sort(edges.begin(), edges.end(), edge_cmp);
+				int edge_num = edges.size();
+				for (int i = 0; i < edge_num / 2; i++) {
+					auto& e1 = edges[2 * i + 0];
+					auto& e2 = edges[2 * i + 1];
+					auto alive_edge = create_alive_edge(e1, e2, poly, cur_y);
+					alive_edge_list.push_back(alive_edge);
+				}
+			}
+		}
+
+		// z update
+		for (auto& ae: alive_edge_list) {
+			float zx = ae.zl - (ae.xl - (int)ae.xl) * ae.dzx;
+			for (float x = ae.xl; x < ae.xr; x++) {
+				int idx = x;
+				if (zx > line_z[idx]) {
+					line_z[idx] = zx;
+					line_color[idx] = alive_poly_list[ae.id].color;
+				}
+				zx = zx + ae.dzx;
+			}
+		}
+
+		// alive list update
+		for (auto it = alive_poly_list.begin(); it != alive_poly_list.end();) {
+			it->second.dy -= 1;
+			if (it->second.dy < 0) {
+				alive_poly_list.erase(it++);
+				continue;
+			}
+			it++;
+		}
+
+		std::vector<AEL_Node> next_edges;
+		for (auto it = alive_edge_list.begin(); it != alive_edge_list.end();) {
+			it->dyl -= 1;
+			it->dyr -= 1;
+			if (it->dyl < 0 || it->dyr < 0) {
+				//todo
+				if (it->dyl < 0 && it->dyr < 0) {
+					alive_edge_list.erase(it++);
+					continue;
+				}
+				if (alive_poly_list.count(it->id) == 0) {
+					alive_edge_list.erase(it++);
+					continue;
+				}
+				if (cur_y == 1) {
+					it++;
+					continue;
+				}
+				auto& poly = alive_poly_list[it->id];
+				auto& new_e = edge_table[cur_y - 1][it->id][0];
+				if (it->dyl < 0) {
+					it->xl = new_e.x;
+					it->dxl = new_e.dx;
+					it->dyl = new_e.dy;
+					it->zl = -1.0f / poly.c * (poly.a * new_e.x + poly.b * (cur_y - 1) + poly.d);
+				} else {
+					it->xr = new_e.x;
+					it->dxr = new_e.dx;
+					it->dyr = new_e.dy;
+				}
+				next_edges.push_back(*it);
+				alive_edge_list.erase(it++);
+				continue;
+			}
+			it->xl += it->dxl;
+			it->xr += it->dxr;
+			it->zl = it->zl + it->dzx * it->dxl + it->dzy;
+			it++;
+		}
+		for (auto& ae : next_edges) {
+			alive_edge_list.push_back(ae);
+		}
 
 		for (int i = 0; i < width; i++) {
 			auto idx = (height - cur_y) * width + i;
