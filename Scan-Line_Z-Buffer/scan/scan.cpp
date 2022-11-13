@@ -100,13 +100,13 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		if (y1 == y2) {
 			edge[0] = create_edge(p1, p3, id);
 			edge[1] = create_edge(p2, p3, id);
-			edge_table[y1].push_back(edge[0]);
-			edge_table[y2].push_back(edge[1]);
+			edge_table[y1][id].push_back(edge[0]);
+			edge_table[y2][id].push_back(edge[1]);
 		} else if (y2 == y3) {
 			edge[0] = create_edge(p1, p2, id);
 			edge[1] = create_edge(p1, p3, id);
-			edge_table[y1].push_back(edge[0]);
-			edge_table[y1].push_back(edge[1]);
+			edge_table[y1][id].push_back(edge[0]);
+			edge_table[y1][id].push_back(edge[1]);
 		} else if (y1 == y2 + 1 && y2 == y3 + 1) {
 			//special, split this triangle into two
 			auto e13 = create_edge(p1, p3, id);
@@ -118,45 +118,47 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 			auto id1 = Scanner::get_id();
 			edge[0] = create_edge(p1, p2, id1);
 			edge[1] = create_edge(p1, p4, id1);
-			edge_table[y1].push_back(edge[0]);
-			edge_table[y1].push_back(edge[1]);
+			edge_table[y1][id1].push_back(edge[0]);
+			edge_table[y1][id1].push_back(edge[1]);
 			PT_Node poly1 = poly;
 			poly1.id = id1;
 			poly1.dy = y1 - y2;
+			poly_table[y1][id1] = poly1;
 
 			auto id2 = Scanner::get_id();
 			edge[0] = create_edge(p2, p3, id2);
 			edge[1] = create_edge(p4, p3, id2);
-			edge_table[y2].push_back(edge[0]);
-			edge_table[y2].push_back(edge[1]);
+			edge_table[y2][id2].push_back(edge[0]);
+			edge_table[y2][id2].push_back(edge[1]);
 			PT_Node poly2 = poly;
 			poly2.id = id2;
 			poly2.dy = y2 - y3;
+			poly_table[y2][id2] = poly2;
 
 			continue;
 		} else if (y1 == y2 + 1) {
 			edge[0] = create_edge(p1, p2, id);
 			edge[1] = create_edge(p1, p3, id);
 			edge[2] = create_edge(p2, p3, id, -1);
-			edge_table[y1].push_back(edge[0]);
-			edge_table[y1].push_back(edge[1]);
-			edge_table[y2-1].push_back(edge[2]);
+			edge_table[y1][id].push_back(edge[0]);
+			edge_table[y1][id].push_back(edge[1]);
+			edge_table[y2-1][id].push_back(edge[2]);
 		} else if (y2 == y3 + 1) {
 			edge[0] = create_edge(p1, p2, id, 1);
 			edge[1] = create_edge(p1, p3, id);
 			edge[2] = create_edge(p2, p3, id);
-			edge_table[y1].push_back(edge[0]);
-			edge_table[y1].push_back(edge[1]);
-			edge_table[y2].push_back(edge[2]);
+			edge_table[y1][id].push_back(edge[0]);
+			edge_table[y1][id].push_back(edge[1]);
+			edge_table[y2][id].push_back(edge[2]);
 		} else {
 			edge[0] = create_edge(p1, p2, id);
 			edge[1] = create_edge(p1, p3, id);
 			edge[2] = create_edge(p2, p3, id, -1);
-			edge_table[y1].push_back(edge[0]);
-			edge_table[y1].push_back(edge[1]);
-			edge_table[y2-1].push_back(edge[2]);
+			edge_table[y1][id].push_back(edge[0]);
+			edge_table[y1][id].push_back(edge[1]);
+			edge_table[y2-1][id].push_back(edge[2]);
 		}
 
-		poly_table[poly_ymax].push_back(poly);
+		poly_table[poly_ymax][poly.id] = poly;
 	}
 }

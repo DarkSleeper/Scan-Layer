@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 
 //classified polygon table
 struct PT_Node {
@@ -51,6 +52,6 @@ public:
 private:
 	int width;
 	int height;
-	std::vector<std::vector<PT_Node>> poly_table;
-	std::vector<std::vector<ET_Node>> edge_table;
+	std::vector<std::unordered_map<size_t, PT_Node>> poly_table;
+	std::vector<std::unordered_map<size_t, std::vector<ET_Node>>> edge_table;
 };
