@@ -70,9 +70,9 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 
 	int triangle_num = triangle_indexes.size() / 3;
 	for (int i = 0; i < triangle_num; i++) {
-		int _a = triangle_indexes[i];
-		int _b = triangle_indexes[i+1];
-		int _c = triangle_indexes[i+2];
+		int _a = triangle_indexes[3 * i];
+		int _b = triangle_indexes[3 * i+1];
+		int _c = triangle_indexes[3 * i+2];
 		if (_a == _b || _a == _c || _b == _c) continue;
 		if (!is_valid[_a] || !is_valid[_b] || !is_valid[_c]) continue; //todo: clip, 先简单把有在范围外的点的三角形整个排除
 		auto p1 = vertices[_a];
@@ -93,8 +93,8 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		poly.dy = poly_ymax - poly_ymin;
 		if (poly.dy <= 0)continue;
 		poly.id = id;
-		//poly.color = (colors[_a] + colors[_b] + colors[_c]) / 3.0f;
-		poly.color = glm::vec4(poly.id * 20);
+		poly.color = (colors[_a] + colors[_b] + colors[_c]) / 3.0f;
+		//poly.color = glm::vec4(poly.id * 20);
 
 		ET_Node edge[3];
 		int y1 = (int)p1.y;
@@ -199,7 +199,7 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 
 	for (int cur_y = height; cur_y > 0; cur_y--) {
 		std::vector<glm::vec4> line_color(width, background_color);
-		std::vector<float> line_z(width, 0); //0<=z<=scale_z
+		std::vector<float> line_z(width, scale_z); //0<=z<=scale_z
 
 		//add new poly
 		if (poly_table[cur_y].size() > 0) {
@@ -235,7 +235,7 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 			float zx = ae.zl - (ae.xl - (int)ae.xl) * ae.dzx;
 			for (float x = ae.xl; x < ae.xr; x++) {
 				int idx = x;
-				if (zx > line_z[idx]) {
+				if (zx < line_z[idx]) {
 					line_z[idx] = zx;
 					line_color[idx] = alive_poly_list[ae.id].color;
 				}
