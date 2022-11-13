@@ -100,34 +100,26 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		int y1 = (int)p1.y;
 		int y2 = (int)p2.y;
 		int y3 = (int)p3.y;
-		if (y1 == y2) {
-			edge[0] = create_edge(p1, p3, id);
-			edge[1] = create_edge(p2, p3, id);
-			edge_table[y1][id].push_back(edge[0]);
-			edge_table[y2][id].push_back(edge[1]);
-		} else if (y2 == y3) {
-			edge[0] = create_edge(p1, p2, id);
-			edge[1] = create_edge(p1, p3, id);
-			edge_table[y1][id].push_back(edge[0]);
-			edge_table[y1][id].push_back(edge[1]);
-		} else if (y1 == y2 + 1 && y2 == y3 + 1) {
-			//special, split this triangle into two
-			auto e13 = create_edge(p1, p3, id);
-			glm::vec3 p4;
-			p4.x = p1.x + (p1.y - p2.y) * e13.dx;
-			p4.y = p2.y;
-			p4.z = -1.0f/poly.c * (poly.a * p4.x + poly.b * p4.y + poly.d);
+		//special, split this triangle into two
+		//consider 0.5 instead of int!
+		auto e13 = create_edge(p1, p3, id);
+		glm::vec3 p4;
+		p4.x = p1.x + (p1.y - p2.y) * e13.dx;
+		p4.y = p2.y;
+		p4.z = -1.0f / poly.c * (poly.a * p4.x + poly.b * p4.y + poly.d);
 
+		if (y1 - y2 > 1) {
 			auto id1 = Scanner::get_id();
-			edge[0] = create_edge(p1, p2, id1);
-			edge[1] = create_edge(p1, p4, id1);
+			edge[0] = create_edge(p1, p2, id1, 1);
+			edge[1] = create_edge(p1, p4, id1, 1);
 			edge_table[y1][id1].push_back(edge[0]);
 			edge_table[y1][id1].push_back(edge[1]);
 			PT_Node poly1 = poly;
 			poly1.id = id1;
-			poly1.dy = y1 - y2;
+			poly1.dy = y1 - y2 - 1;
 			poly_table[y1][id1] = poly1;
-
+		}
+		if (y2 - y3 > 1) {
 			auto id2 = Scanner::get_id();
 			edge[0] = create_edge(p2, p3, id2);
 			edge[1] = create_edge(p4, p3, id2);
@@ -137,32 +129,70 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 			poly2.id = id2;
 			poly2.dy = y2 - y3;
 			poly_table[y2][id2] = poly2;
-
-			continue;
-		} else if (y1 == y2 + 1) {
-			edge[0] = create_edge(p1, p2, id);
-			edge[1] = create_edge(p1, p3, id);
-			edge[2] = create_edge(p2, p3, id, -1);
-			edge_table[y1][id].push_back(edge[0]);
-			edge_table[y1][id].push_back(edge[1]);
-			edge_table[y2-1][id].push_back(edge[2]);
-		} else if (y2 == y3 + 1) {
-			edge[0] = create_edge(p1, p2, id, 1);
-			edge[1] = create_edge(p1, p3, id);
-			edge[2] = create_edge(p2, p3, id);
-			edge_table[y1][id].push_back(edge[0]);
-			edge_table[y1][id].push_back(edge[1]);
-			edge_table[y2][id].push_back(edge[2]);
-		} else {
-			edge[0] = create_edge(p1, p2, id);
-			edge[1] = create_edge(p1, p3, id);
-			edge[2] = create_edge(p2, p3, id, -1);
-			edge_table[y1][id].push_back(edge[0]);
-			edge_table[y1][id].push_back(edge[1]);
-			edge_table[y2-1][id].push_back(edge[2]);
 		}
+		//if (y1 == y2) {
+		//	edge[0] = create_edge(p1, p3, id);
+		//	edge[1] = create_edge(p2, p3, id);
+		//	edge_table[y1][id].push_back(edge[0]);
+		//	edge_table[y2][id].push_back(edge[1]);
+		//} else if (y2 == y3) {
+		//	edge[0] = create_edge(p1, p2, id);
+		//	edge[1] = create_edge(p1, p3, id);
+		//	edge_table[y1][id].push_back(edge[0]);
+		//	edge_table[y1][id].push_back(edge[1]);
+		//} else if (y1 == y2 + 1 && y2 == y3 + 1) {
+		//	//special, split this triangle into two
+		//	auto e13 = create_edge(p1, p3, id);
+		//	glm::vec3 p4;
+		//	p4.x = p1.x + (p1.y - p2.y) * e13.dx;
+		//	p4.y = p2.y;
+		//	p4.z = -1.0f/poly.c * (poly.a * p4.x + poly.b * p4.y + poly.d);
 
-		poly_table[poly_ymax][poly.id] = poly;
+		//	auto id1 = Scanner::get_id();
+		//	edge[0] = create_edge(p1, p2, id1);
+		//	edge[1] = create_edge(p1, p4, id1);
+		//	edge_table[y1][id1].push_back(edge[0]);
+		//	edge_table[y1][id1].push_back(edge[1]);
+		//	PT_Node poly1 = poly;
+		//	poly1.id = id1;
+		//	poly1.dy = y1 - y2;
+		//	poly_table[y1][id1] = poly1;
+
+		//	auto id2 = Scanner::get_id();
+		//	edge[0] = create_edge(p2, p3, id2);
+		//	edge[1] = create_edge(p4, p3, id2);
+		//	edge_table[y2][id2].push_back(edge[0]);
+		//	edge_table[y2][id2].push_back(edge[1]);
+		//	PT_Node poly2 = poly;
+		//	poly2.id = id2;
+		//	poly2.dy = y2 - y3;
+		//	poly_table[y2][id2] = poly2;
+
+		//	continue;
+		//} else if (y1 == y2 + 1) {
+		//	edge[0] = create_edge(p1, p2, id);
+		//	edge[1] = create_edge(p1, p3, id);
+		//	edge[2] = create_edge(p2, p3, id, -1);
+		//	edge_table[y1][id].push_back(edge[0]);
+		//	edge_table[y1][id].push_back(edge[1]);
+		//	edge_table[y2-1][id].push_back(edge[2]);
+		//} else if (y2 == y3 + 1) {
+		//	edge[0] = create_edge(p1, p2, id, 1);
+		//	edge[1] = create_edge(p1, p3, id);
+		//	edge[2] = create_edge(p2, p3, id);
+		//	edge_table[y1][id].push_back(edge[0]);
+		//	edge_table[y1][id].push_back(edge[1]);
+		//	edge_table[y2][id].push_back(edge[2]);
+		//} else {
+		//	edge[0] = create_edge(p1, p2, id);
+		//	edge[1] = create_edge(p1, p3, id);
+		//	edge[2] = create_edge(p2, p3, id, -1);
+		//	edge_table[y1][id].push_back(edge[0]);
+		//	edge_table[y1][id].push_back(edge[1]);
+		//	edge_table[y2-1][id].push_back(edge[2]);
+		//}
+
+		//poly_table[poly_ymax][poly.id] = poly;
 	}
 }
 
