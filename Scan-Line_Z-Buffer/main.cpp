@@ -111,20 +111,10 @@ int main(int argc, char* argv[]) {
 	scanner.init(triangle_indexes, screen_vertices, colors);
 
 	//todo: z-buffer algorithm and img output
-
-
-
-
-
+	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
+	scanner.update(img_data, glm::vec4(64, 64, 64, 255));
 
 	//image
-	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
-	for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
-		img_data[i * 4 + 0] = (unsigned char)(255);
-		img_data[i * 4 + 1] = 0;
-		img_data[i * 4 + 2] = 0;
-		img_data[i * 4 + 3] = (unsigned char)(255);
-	}
 	GLuint texture;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);

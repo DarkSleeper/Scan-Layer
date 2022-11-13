@@ -48,6 +48,7 @@ public:
 	Scanner(int screen_width, int screen_height);
 	static size_t get_id();
 	void init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors);
+	void update(unsigned char* frame_buffer, glm::vec4 background_color);
 
 private:
 	int width;

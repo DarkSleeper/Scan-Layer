@@ -162,3 +162,21 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		poly_table[poly_ymax][poly.id] = poly;
 	}
 }
+
+void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
+{
+	for (int cur_y = height; cur_y > 0; cur_y--) {
+		std::vector<glm::vec4> line_color(width, background_color);
+		std::vector<float> line_z(width, 0); //0<=z<=scale_z
+
+
+
+		for (int i = 0; i < width; i++) {
+			auto idx = (height - cur_y) * width + i;
+			frame_buffer[idx * 4 + 0] = (unsigned char)(line_color[i].r);
+			frame_buffer[idx * 4 + 1] = (unsigned char)(line_color[i].g);
+			frame_buffer[idx * 4 + 2] = (unsigned char)(line_color[i].b);
+			frame_buffer[idx * 4 + 3] = (unsigned char)(line_color[i].a);
+		}
+	}
+}
