@@ -16,13 +16,13 @@ ImportedModel::ImportedModel(const char* filePath)
 	_triangle_indexes = modelImporter.getTriangleVertices();
 
 	vector<float> origin_verts = modelImporter.getOriginVertices();
-	vector<float> tcs = modelImporter.getTextureCoordinates();
+	//vector<float> tcs = modelImporter.getTextureCoordinates();
 	vector<float> normals = modelImporter.getNormals();
 
 	for (int i = 0; i < _numVertices; i++)
 	{
 		_origin_vertices.push_back(glm::vec3(origin_verts[i * 3 + 0], origin_verts[i * 3 + 1], origin_verts[i * 3 + 2]));
-		_texCoords.push_back(glm::vec2(tcs[i * 2 + 0], tcs[i * 2 + 1]));
+		//_texCoords.push_back(glm::vec2(tcs[i * 2 + 0], tcs[i * 2 + 1]));
 		_normalVecs.push_back(glm::vec3(normals[i * 3 + 0], normals[i * 3 + 1], normals[i * 3 + 2]));
 	}
 }
@@ -116,13 +116,13 @@ void ModelImporter::parseOBJ(const char* filePath)
 				idx[i] = stoi(v) - 1;
 
 				int vertRef = idx[i] * 3;   
-				int tcRef = (stoi(t) - 1) * 2;
+				//int tcRef = (stoi(t) - 1) * 2;
 				int normRef = (stoi(n) - 1) * 3;
 
 				_triangleVerts.push_back(idx[i]);
 
-				_textureCoords[idx[i] * 2 + 0] = _stVals[tcRef];
-				_textureCoords[idx[i] * 2 + 1] = _stVals[tcRef + 1];
+				//_textureCoords[idx[i] * 2 + 0] = _stVals[tcRef];
+				//_textureCoords[idx[i] * 2 + 1] = _stVals[tcRef + 1];
 
 				_normals[idx[i] * 3 + 0] = _normVals[normRef];
 				_normals[idx[i] * 3 + 1] = _normVals[normRef + 1];
