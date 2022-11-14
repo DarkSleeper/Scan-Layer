@@ -225,10 +225,9 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 
 		// z update
 		for (auto& ae: alive_edge_list) {
-			int ixl = (int)(ae.xl + 0.5);
-			int ixr = (int)(ae.xr - 0.5);
-			float zx = ae.zl - (ae.xl - ixl) * ae.dzx;
-			for (int x = ixl; x <= ixr; x++) {
+			float zx = ae.zl;
+			//or directly use ae.xr as r value
+			for (float x = ae.xl; x <= int(ae.xr) + 1; x++) {
 				int idx = x;
 				if (idx >= width) break;
 				if (idx < 0) continue;
