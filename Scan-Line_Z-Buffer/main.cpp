@@ -207,11 +207,12 @@ int main(int argc, char* argv[]) {
 		stop = clock();
 		double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
 		std::cout << duration << std::endl;
-		if (camera_theta < 370) avg_time += duration;
-
-		frame_cnt++;
+		if (camera_theta > 360) {
+			avg_time += duration;
+			frame_cnt++;
+		}
 		camera_theta += STEP;
-		if (camera_theta >= 370) break;
+		if (camera_theta >= 360 * 3) break;
 
 		/* Render here */
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
