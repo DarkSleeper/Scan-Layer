@@ -4,12 +4,14 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <time.h>
 #include "loader/model_loader.h"
 #include "tool/camera.h"
 #include "scan/scan.h"
 
 #define SCR_WIDTH 1960
 #define SCR_HEIGHT 1080
+#define STEP 10
 const float pai = 3.1415926f;
 
 float toRadians(float degrees) {
@@ -31,7 +33,7 @@ void processInput(GLFWwindow* window);
 void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 
 int main(int argc, char* argv[]) {
-	string model_name = "runtime/model/sword.obj";
+	string model_name = "runtime/model/robot.obj";
 	if (argc == 2) {
 		model_name = string("runtime/model/") + argv[1] + ".obj";
 	}
@@ -86,44 +88,15 @@ int main(int argc, char* argv[]) {
 	glm::mat4 model_mat;
 	model_mat = glm::identity<glm::mat4>();
 	//fixed view
-	glm::mat4 world_to_view_mat = camera.GetViewMatrix();
+	glm::vec3 Position(0, 0, 10);
+	glm::vec3 Target(0, 0, 0);
+	glm::vec3 Up(0, 1, 0);
 
-	/*vertices.clear();
-	vertex_num = 3;
-	vertices.push_back({0,0,0});
-	vertices.push_back({1,1,1});
-	vertices.push_back({-1,-1,-1});*/
-	std::vector<glm::vec3> screen_vertices(vertex_num);
-	for (int i = 0; i < vertex_num; i++) {
-		auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
-		screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
-	}
-	std::vector<glm::vec4> colors(vertex_num);
-	for (int i = 0; i < vertex_num; i++) {
-		auto norm = normals[i];
-		glm::normalize(norm);
-		auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
-		colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
-	}
-
-	//todo: add to table
-	Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
-	scanner.init(triangle_indexes, screen_vertices, colors);
-
-	//todo: z-buffer algorithm and img output
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
-	scanner.update(img_data, glm::vec4(0, 0, 0, 255));
 
-	//image
+	////image
 	GLuint texture;
 	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glBindTexture(GL_TEXTURE_2D, 0);
 
 	//shader
 	auto vertex_path = "runtime/shader/opacity.vs";
@@ -178,6 +151,9 @@ int main(int argc, char* argv[]) {
 	float delta_time = 0.0f;
 	float last_time = 0.0f;
 
+	float camera_theta = 0.0f;
+
+	double avg_time = 0.0;
 	int frame_cnt = 0;
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
@@ -192,6 +168,49 @@ int main(int argc, char* argv[]) {
 			last_time = current_time;
 		}
 		processInput(window);
+
+		clock_t start, stop;
+		start = clock();
+		Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
+		glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);;
+
+		std::vector<glm::vec3> screen_vertices(vertex_num);
+		for (int i = 0; i < vertex_num; i++) {
+			auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
+			screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
+		}
+		std::vector<glm::vec4> colors(vertex_num);
+		for (int i = 0; i < vertex_num; i++) {
+			auto norm = normals[i];
+			glm::normalize(norm);
+			auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
+			colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
+		}
+
+		//todo: add to table
+		Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
+		scanner.init(triangle_indexes, screen_vertices, colors);
+
+		//todo: z-buffer algorithm and img output
+		scanner.update(img_data, glm::vec4(0, 0, 0, 255));
+
+		//image
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		stop = clock();
+		double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
+		std::cout << duration << std::endl;
+		if (camera_theta < 370) avg_time += duration;
+
+		frame_cnt++;
+		camera_theta += STEP;
+		if (camera_theta >= 370) break;
 
 		/* Render here */
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -214,15 +233,13 @@ int main(int argc, char* argv[]) {
 
 		/* Poll for and process events */
 		glfwPollEvents();
-
-		frame_cnt++;
 	}
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
 
 
-	std::cout << "success!\n";
+	std::cout << "average_time = " << avg_time / frame_cnt << std::endl;
 	return 0;
 }
 
