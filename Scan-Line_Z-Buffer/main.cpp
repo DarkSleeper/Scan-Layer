@@ -155,6 +155,7 @@ int main(int argc, char* argv[]) {
 
 	double avg_time = 0.0;
 	int frame_cnt = 0;
+
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
@@ -187,11 +188,11 @@ int main(int argc, char* argv[]) {
 			colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
 		}
 
-		//todo: add to table
+		//add to table
 		Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
 		scanner.init(triangle_indexes, screen_vertices, colors);
 
-		//todo: z-buffer algorithm and img output
+		//z-buffer algorithm and img output
 		scanner.update(img_data, glm::vec4(0, 0, 0, 255));
 
 		//image

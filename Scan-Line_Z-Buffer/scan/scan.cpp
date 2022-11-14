@@ -10,10 +10,10 @@ Scanner::Scanner(int screen_width, int screen_height)
 	scale_z = (width + height) / 2;
 	poly_table.resize(screen_height + 1);
 	edge_table.resize(screen_height + 1);
+	max_id = 0;
 }
 
 size_t Scanner::get_id() {
-	static size_t max_id = 0;
 	max_id++;
 	return max_id;
 }
