@@ -55,15 +55,17 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 	};
 
 	//a is higher than b
-	auto create_edge = [&](glm::vec3& a, glm::vec3& b, int id, int cut_type = 0) -> ET_Node {
+	auto create_edge = [&](glm::vec3& a, glm::vec3& b, int id, int ymax, int ymin, int cut_type = 0) -> ET_Node {
 		ET_Node edge;
 		edge.id = id;
-		edge.dy = (int)a.y - (int)b.y;
-		if (cut_type == 1 || cut_type == -1) edge.dy -= 1;
+		edge.dy = ymax - ymin;
+		//if (cut_type == 1 || cut_type == -1) edge.dy -= 1;
 		edge.dx = -(a.x - b.x) / (a.y - b.y);
+
 		float ycut;
-		if (cut_type == -1) ycut = a.y - (int)a.y + 1;
-		else ycut = a.y - (int)a.y;
+		//if (cut_type == -1) ycut = a.y - ymax + 1;
+		//else 
+		ycut = a.y - (ymax + 0.5);
 		edge.x = a.x + ycut * edge.dx;
 		return std::move(edge);
 	};
@@ -80,119 +82,80 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		auto p3 = vertices[_c];
 		sort(p1, p2, p3);
 
-		auto id = Scanner::get_id();
-
 		PT_Node poly;
 		poly.a = ((p2.y - p1.y) * (p3.z - p1.z) - (p2.z - p1.z) * (p3.y - p1.y));
 		poly.b = ((p2.z - p1.z) * (p3.x - p1.x) - (p2.x - p1.x) * (p3.z - p1.z));
 		poly.c = ((p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x));
 		poly.d = (0 - (poly.a * p1.x + poly.b * p1.y + poly.c * p1.z));
-		if (abs(poly.c) < 0.1) continue; //plane is vertical to screen
-		int poly_ymax = fmax(p1.y, fmax(p2.y, p3.y));
-		int poly_ymin = fmin(p1.y, fmin(p2.y, p3.y));
-		poly.dy = poly_ymax - poly_ymin;
-		if (poly.dy <= 0)continue;
-		poly.id = id;
+		if (fabs(poly.c) <= 0.0001f) continue; //plane is vertical to screen
 		poly.color = (colors[_a] + colors[_b] + colors[_c]) / 3.0f;
 		//poly.color = glm::vec4(poly.id * 20);
 
 		ET_Node edge[3];
-		int y1 = (int)p1.y;
-		int y2 = (int)p2.y;
-		int y3 = (int)p3.y;
 		//special, split this triangle into two
 		//consider 0.5 instead of int!
-		auto e13 = create_edge(p1, p3, id);
-		glm::vec3 p4;
-		p4.x = p1.x + (p1.y - p2.y) * e13.dx;
-		p4.y = p2.y;
-		p4.z = -1.0f / poly.c * (poly.a * p4.x + poly.b * p4.y + poly.d);
-
-		if (y1 - y2 > 1) {
+		auto d13 = -(p1.x - p3.x) / (p1.y - p3.y);
+		auto d12 = -(p1.x - p2.x) / (p1.y - p2.y);
+		auto d23 = -(p2.x - p3.x) / (p2.y - p3.y);
+		
+		int y1 = (int)(p1.y - 0.5);
+		int y2_1 = (int)(p2.y + 0.5);
+		int y2_3 = (int)(p2.y - 0.5);
+		int y3 = (int)(p3.y + 0.5);
+		if (p1.y == p2.y && p2.y == p3.y) {
+			float xmax = fmax(p1.x, fmax(p2.x, p3.x));
+			float xmin = fmin(p1.x, fmin(p2.x, p3.x));
+			auto id3 = Scanner::get_id();
+			edge[0] = ET_Node{xmin, 0, 0, id3};
+			edge[1] = ET_Node{xmax, 0, 0, id3};
+			edge_table[y1][id3].push_back(edge[0]);
+			edge_table[y1][id3].push_back(edge[1]);
+			PT_Node poly3 = poly;
+			poly3.id = id3;
+			poly3.dy = 0;
+			poly_table[y1][id3] = poly3;
+		} else if (p1.y == p2.y) {
+			auto id2 = Scanner::get_id();
+			edge[0] = create_edge(p1, p3, id2, y2_3, y3);
+			edge[1] = create_edge(p2, p3, id2, y2_3, y3);
+			edge_table[y2_3][id2].push_back(edge[0]);
+			edge_table[y2_3][id2].push_back(edge[1]);
+			PT_Node poly2 = poly;
+			poly2.id = id2;
+			poly2.dy = y2_3 - y3;
+			poly_table[y2_3][id2] = poly2;
+		} else if (p2.y == p3.y) {
 			auto id1 = Scanner::get_id();
-			edge[0] = create_edge(p1, p2, id1, 1);
-			edge[1] = create_edge(p1, p4, id1, 1);
+			edge[0] = create_edge(p1, p2, id1, y1, y2_1);
+			edge[1] = create_edge(p1, p3, id1, y1, y2_1);
 			edge_table[y1][id1].push_back(edge[0]);
 			edge_table[y1][id1].push_back(edge[1]);
 			PT_Node poly1 = poly;
 			poly1.id = id1;
-			poly1.dy = y1 - y2 - 1;
+			poly1.dy = y1 - y2_1;
 			poly_table[y1][id1] = poly1;
-		}
-		if (y2 - y3 > 1) {
+		} else {
+			auto id1 = Scanner::get_id();
+			edge[0] = create_edge(p1, p2, id1, y1, y2_1);
+			edge[1] = create_edge(p1, p3, id1, y1, y2_1);
+			edge_table[y1][id1].push_back(edge[0]);
+			edge_table[y1][id1].push_back(edge[1]);
+			PT_Node poly1 = poly;
+			poly1.id = id1;
+			poly1.dy = y1 - y2_1;
+			poly_table[y1][id1] = poly1;
+
 			auto id2 = Scanner::get_id();
-			edge[0] = create_edge(p2, p3, id2);
-			edge[1] = create_edge(p4, p3, id2);
-			edge_table[y2][id2].push_back(edge[0]);
-			edge_table[y2][id2].push_back(edge[1]);
+			edge[0] = create_edge(p2, p3, id2, y2_3, y3);
+			edge[1] = create_edge(p1, p3, id2, y2_3, y3);
+			edge_table[y2_3][id2].push_back(edge[0]);
+			edge_table[y2_3][id2].push_back(edge[1]);
 			PT_Node poly2 = poly;
 			poly2.id = id2;
-			poly2.dy = y2 - y3;
-			poly_table[y2][id2] = poly2;
+			poly2.dy = y2_3 - y3;
+			poly_table[y2_3][id2] = poly2;
 		}
-		//if (y1 == y2) {
-		//	edge[0] = create_edge(p1, p3, id);
-		//	edge[1] = create_edge(p2, p3, id);
-		//	edge_table[y1][id].push_back(edge[0]);
-		//	edge_table[y2][id].push_back(edge[1]);
-		//} else if (y2 == y3) {
-		//	edge[0] = create_edge(p1, p2, id);
-		//	edge[1] = create_edge(p1, p3, id);
-		//	edge_table[y1][id].push_back(edge[0]);
-		//	edge_table[y1][id].push_back(edge[1]);
-		//} else if (y1 == y2 + 1 && y2 == y3 + 1) {
-		//	//special, split this triangle into two
-		//	auto e13 = create_edge(p1, p3, id);
-		//	glm::vec3 p4;
-		//	p4.x = p1.x + (p1.y - p2.y) * e13.dx;
-		//	p4.y = p2.y;
-		//	p4.z = -1.0f/poly.c * (poly.a * p4.x + poly.b * p4.y + poly.d);
 
-		//	auto id1 = Scanner::get_id();
-		//	edge[0] = create_edge(p1, p2, id1);
-		//	edge[1] = create_edge(p1, p4, id1);
-		//	edge_table[y1][id1].push_back(edge[0]);
-		//	edge_table[y1][id1].push_back(edge[1]);
-		//	PT_Node poly1 = poly;
-		//	poly1.id = id1;
-		//	poly1.dy = y1 - y2;
-		//	poly_table[y1][id1] = poly1;
-
-		//	auto id2 = Scanner::get_id();
-		//	edge[0] = create_edge(p2, p3, id2);
-		//	edge[1] = create_edge(p4, p3, id2);
-		//	edge_table[y2][id2].push_back(edge[0]);
-		//	edge_table[y2][id2].push_back(edge[1]);
-		//	PT_Node poly2 = poly;
-		//	poly2.id = id2;
-		//	poly2.dy = y2 - y3;
-		//	poly_table[y2][id2] = poly2;
-
-		//	continue;
-		//} else if (y1 == y2 + 1) {
-		//	edge[0] = create_edge(p1, p2, id);
-		//	edge[1] = create_edge(p1, p3, id);
-		//	edge[2] = create_edge(p2, p3, id, -1);
-		//	edge_table[y1][id].push_back(edge[0]);
-		//	edge_table[y1][id].push_back(edge[1]);
-		//	edge_table[y2-1][id].push_back(edge[2]);
-		//} else if (y2 == y3 + 1) {
-		//	edge[0] = create_edge(p1, p2, id, 1);
-		//	edge[1] = create_edge(p1, p3, id);
-		//	edge[2] = create_edge(p2, p3, id);
-		//	edge_table[y1][id].push_back(edge[0]);
-		//	edge_table[y1][id].push_back(edge[1]);
-		//	edge_table[y2][id].push_back(edge[2]);
-		//} else {
-		//	edge[0] = create_edge(p1, p2, id);
-		//	edge[1] = create_edge(p1, p3, id);
-		//	edge[2] = create_edge(p2, p3, id, -1);
-		//	edge_table[y1][id].push_back(edge[0]);
-		//	edge_table[y1][id].push_back(edge[1]);
-		//	edge_table[y2-1][id].push_back(edge[2]);
-		//}
-
-		//poly_table[poly_ymax][poly.id] = poly;
 	}
 }
 
@@ -235,6 +198,7 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 			for (auto& iter: poly_table[cur_y]) {
 				auto& id = iter.first;
 				auto& poly = iter.second;
+				if (poly.dy < 0) continue;
 				auto alive_poly = APL_Node();
 				alive_poly.a = poly.a;
 				alive_poly.b = poly.b;
@@ -253,7 +217,7 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 				for (int i = 0; i < edge_num / 2; i++) {
 					auto& e1 = edges[2 * i + 0];
 					auto& e2 = edges[2 * i + 1];
-					auto alive_edge = create_alive_edge(e1, e2, poly, cur_y);
+					auto alive_edge = create_alive_edge(e1, e2, poly, cur_y + 0.5);
 					alive_edge_list.push_back(alive_edge);
 				}
 			}
@@ -261,8 +225,10 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 
 		// z update
 		for (auto& ae: alive_edge_list) {
-			float zx = ae.zl - (ae.xl - (int)ae.xl) * ae.dzx;
-			for (float x = ae.xl; x < ae.xr; x++) {
+			int ixl = (int)(ae.xl + 0.5);
+			int ixr = (int)(ae.xr - 0.5);
+			float zx = ae.zl - (ae.xl - ixl) * ae.dzx;
+			for (int x = ixl; x <= ixr; x++) {
 				int idx = x;
 				if (idx >= width) break;
 				if (idx < 0) continue;
@@ -289,32 +255,32 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 			it->dyl -= 1;
 			it->dyr -= 1;
 			if (it->dyl < 0 || it->dyr < 0) {
-				//todo
-				if (it->dyl < 0 && it->dyr < 0) {
-					alive_edge_list.erase(it++);
-					continue;
-				}
-				if (alive_poly_list.count(it->id) == 0) {
-					alive_edge_list.erase(it++);
-					continue;
-				}
-				if (cur_y == 1) {
-					it++;
-					continue;
-				}
-				auto& poly = alive_poly_list[it->id];
-				auto& new_e = edge_table[cur_y - 1][it->id][0];
-				if (it->dyl < 0) {
-					it->xl = new_e.x;
-					it->dxl = new_e.dx;
-					it->dyl = new_e.dy;
-					it->zl = -1.0f / poly.c * (poly.a * new_e.x + poly.b * (cur_y - 1) + poly.d);
-				} else {
-					it->xr = new_e.x;
-					it->dxr = new_e.dx;
-					it->dyr = new_e.dy;
-				}
-				next_edges.push_back(*it);
+				////todo
+				//if (it->dyl < 0 && it->dyr < 0) {
+				//	alive_edge_list.erase(it++);
+				//	continue;
+				//}
+				//if (alive_poly_list.count(it->id) == 0) {
+				//	alive_edge_list.erase(it++);
+				//	continue;
+				//}
+				//if (cur_y == 1) {
+				//	it++;
+				//	continue;
+				//}
+				//auto& poly = alive_poly_list[it->id];
+				//auto& new_e = edge_table[cur_y - 1][it->id][0];
+				//if (it->dyl < 0) {
+				//	it->xl = new_e.x;
+				//	it->dxl = new_e.dx;
+				//	it->dyl = new_e.dy;
+				//	it->zl = -1.0f / poly.c * (poly.a * new_e.x + poly.b * (cur_y - 1) + poly.d);
+				//} else {
+				//	it->xr = new_e.x;
+				//	it->dxr = new_e.dx;
+				//	it->dyr = new_e.dy;
+				//}
+				//next_edges.push_back(*it);
 				alive_edge_list.erase(it++);
 				continue;
 			}

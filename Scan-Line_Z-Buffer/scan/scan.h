@@ -37,7 +37,7 @@ struct AEL_Node {
 	float xr;
 	float dxr;
 	int dyr;
-	float zl;          //z越大，越近
+	float zl;          
 	float dzx;         //-a/c (c!=0)
 	float dzy;		   //b/c
 	size_t id;

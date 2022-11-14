@@ -31,7 +31,7 @@ void processInput(GLFWwindow* window);
 void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 
 int main(int argc, char* argv[]) {
-	string model_name = "runtime/model/cube_rot.obj";
+	string model_name = "runtime/model/fly_lion.obj";
 	if (argc == 2) {
 		model_name = string("runtime/model/") + argv[1] + ".obj";
 	}
