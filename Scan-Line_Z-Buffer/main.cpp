@@ -32,8 +32,10 @@ void processInput(GLFWwindow* window);
 
 void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 
+bool if_scan = false;
+
 int main(int argc, char* argv[]) {
-	string model_name = "runtime/model/robot.obj";
+	string model_name = "runtime/model/bunny.obj";
 	if (argc == 2) {
 		model_name = string("runtime/model/") + argv[1] + ".obj";
 	}
@@ -147,6 +149,58 @@ int main(int argc, char* argv[]) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
+	//display
+	vertex_path = "runtime/shader/display.vs";
+	fragment_path = "runtime/shader/display.fs";
+	GLuint display_program[2];
+	init_shader(vertex_path, fragment_path, display_program[0]);
+	vertex_path = "runtime/shader/line.vs";
+	fragment_path = "runtime/shader/line.fs";
+	init_shader(vertex_path, fragment_path, display_program[1]);
+
+	GLuint display_vao = {0};
+	GLuint display_vbo[2] = {0};
+	GLuint display_ebo;
+
+	glGenVertexArrays(1, &display_vao);
+	glBindVertexArray(display_vao);
+
+	glGenBuffers(1, &ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangle_indexes.size() * sizeof(int), &(triangle_indexes[0]), GL_STATIC_DRAW);
+
+	vector<float> verts;
+	for (auto& v: vertices) {
+		verts.push_back(v.x);
+		verts.push_back(v.y);
+		verts.push_back(v.z);
+	}
+	vector<float> norms;
+	for (auto& n: normals) {
+		norms.push_back(n.x);
+		norms.push_back(n.y);
+		norms.push_back(n.z);
+	}
+	//vert
+	glGenBuffers(2, display_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), &(verts[0]), GL_STATIC_DRAW);
+
+	//norm
+	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, norms.size() * sizeof(float), &(norms[0]), GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[1]);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	
 	// timing
 	float delta_time = 0.0f;
 	float last_time = 0.0f;
@@ -155,6 +209,17 @@ int main(int argc, char* argv[]) {
 
 	double avg_time = 0.0;
 	int frame_cnt = 0;
+
+	//set light
+	glm::vec3 direct_light = glm::vec3(1, -1, -1);
+
+	//prepare funcs
+	auto setMat4 = [&](const GLuint& program, const std::string& name, const glm::mat4& mat) -> void {
+		glUniformMatrix4fv(glGetUniformLocation(program, name.c_str()), 1, GL_FALSE, &mat[0][0]);
+	};
+	auto setVec3 = [&](const GLuint& program, const std::string& name, const glm::vec3& value) -> void {
+		glUniform3fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]);
+	};
 
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
@@ -170,65 +235,92 @@ int main(int argc, char* argv[]) {
 		}
 		processInput(window);
 
-		clock_t start, stop;
-		start = clock();
-		Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
-		glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);;
+		//clock_t start, stop;
+		//start = clock();
+		//Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
+		//glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);
 
-		std::vector<glm::vec3> screen_vertices(vertex_num);
-		for (int i = 0; i < vertex_num; i++) {
-			auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
-			screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
-		}
-		std::vector<glm::vec4> colors(vertex_num);
-		for (int i = 0; i < vertex_num; i++) {
-			auto norm = normals[i];
-			glm::normalize(norm);
-			auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
-			colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
-		}
+		//std::vector<glm::vec3> screen_vertices(vertex_num);
+		//for (int i = 0; i < vertex_num; i++) {
+		//	auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
+		//	screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
+		//}
+		//std::vector<glm::vec4> colors(vertex_num);
+		//for (int i = 0; i < vertex_num; i++) {
+		//	auto norm = normals[i];
+		//	glm::normalize(norm);
+		//	auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
+		//	colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
+		//}
 
-		//add to table
-		Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
-		scanner.init(triangle_indexes, screen_vertices, colors);
+		////add to table
+		//Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
+		//scanner.init(triangle_indexes, screen_vertices, colors);
 
-		//z-buffer algorithm and img output
-		scanner.update(img_data, glm::vec4(0, 0, 0, 255));
+		////z-buffer algorithm and img output
+		//scanner.update(img_data, glm::vec4(0, 0, 0, 255));
 
-		//image
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		////image
+		//glBindTexture(GL_TEXTURE_2D, texture);
+		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		//glBindTexture(GL_TEXTURE_2D, 0);
 
-		stop = clock();
-		double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
-		std::cout << duration << std::endl;
-		if (camera_theta > 360) {
-			avg_time += duration;
-			frame_cnt++;
-		}
-		camera_theta += STEP;
-		if (camera_theta >= 360 * 3) break;
+		//stop = clock();
+		//double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
+		//std::cout << duration << std::endl;
+		//if (camera_theta > 360) {
+		//	avg_time += duration;
+		//	frame_cnt++;
+		//}
+		//camera_theta += STEP;
+		//if (camera_theta >= 360 * 3) break;
+
+		glm::mat4 view_mat = camera.GetViewMatrix();
+		glm::mat4 inv_world_mat = glm::inverse(view_mat);
 
 		/* Render here */
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.f);
+		if (if_scan) {
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClearColor(0.0f, 0.0f, 0.0f, 1.f);
 
-		glUseProgram(renderingProgram);
+			glUseProgram(renderingProgram);
 
-		glBindVertexArray(vao[0]);
+			glBindVertexArray(vao[0]);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glUniform1i(glGetUniformLocation(renderingProgram, "colorMap"), 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glUniform1i(glGetUniformLocation(renderingProgram, "colorMap"), 0);
 		
-		glDisable(GL_DEPTH_TEST);
+			glDisable(GL_DEPTH_TEST);
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		} else {
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glClearColor(0.0f, 0.0f, 0.0f, 1.f);
+
+			//启动着色器程序,在GPU上安装GLSL代码,这不会运行着色器程序，
+			auto& program = display_program[0];
+			glUseProgram(program);
+
+			glBindVertexArray(display_vao);
+
+			setMat4(program, "view_to_clip_matrix", view_to_clip_mat);
+			setMat4(program, "world_to_view_matrix", view_mat);
+			setMat4(program, "inv_world_matrix", inv_world_mat);
+			setMat4(program, "model", model_mat);
+			setVec3(program, "direct_light", direct_light);
+
+			glEnable(GL_DEPTH_TEST);
+			//指定用于深度缓冲比较值；
+			glDepthFunc(GL_LEQUAL);
+
+			//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glDrawElements(GL_TRIANGLES, triangle_num * 3, GL_UNSIGNED_INT, 0);
+		}
 
 		/* Swap front and back buffers */
 		glfwSwapBuffers(window);
