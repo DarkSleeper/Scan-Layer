@@ -10,12 +10,6 @@ Scanner::Scanner(int screen_width, int screen_height)
 	scale_z = (width + height) / 2;
 	poly_table.resize(screen_height + 1);
 	edge_table.resize(screen_height + 1);
-	max_id = 0;
-}
-
-size_t Scanner::get_id() {
-	max_id++;
-	return max_id;
 }
 
 void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors) 
@@ -102,10 +96,12 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		int y2_1 = (int)(p2.y + 0.5);
 		int y2_3 = (int)(p2.y - 0.5);
 		int y3 = (int)(p3.y + 0.5);
+		size_t _id1 = 2 * i + 0;
+		size_t _id2 = 2 * i + 1;
 		if (p1.y == p2.y && p2.y == p3.y) {
 			float xmax = fmax(p1.x, fmax(p2.x, p3.x));
 			float xmin = fmin(p1.x, fmin(p2.x, p3.x));
-			auto id3 = Scanner::get_id();
+			auto id3 = _id1;
 			edge[0] = ET_Node{xmin, 0, 0, id3};
 			edge[1] = ET_Node{xmax, 0, 0, id3};
 			edge_table[y1][id3].push_back(edge[0]);
@@ -115,7 +111,7 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 			poly3.dy = 0;
 			poly_table[y1][id3] = poly3;
 		} else if (p1.y == p2.y) {
-			auto id2 = Scanner::get_id();
+			auto id2 = _id1;
 			edge[0] = create_edge(p1, p3, id2, y2_3, y3);
 			edge[1] = create_edge(p2, p3, id2, y2_3, y3);
 			edge_table[y2_3][id2].push_back(edge[0]);
@@ -125,7 +121,7 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 			poly2.dy = y2_3 - y3;
 			poly_table[y2_3][id2] = poly2;
 		} else if (p2.y == p3.y) {
-			auto id1 = Scanner::get_id();
+			auto id1 = _id1;
 			edge[0] = create_edge(p1, p2, id1, y1, y2_1);
 			edge[1] = create_edge(p1, p3, id1, y1, y2_1);
 			edge_table[y1][id1].push_back(edge[0]);
@@ -135,7 +131,7 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 			poly1.dy = y1 - y2_1;
 			poly_table[y1][id1] = poly1;
 		} else {
-			auto id1 = Scanner::get_id();
+			auto id1 = _id1;
 			edge[0] = create_edge(p1, p2, id1, y1, y2_1);
 			edge[1] = create_edge(p1, p3, id1, y1, y2_1);
 			edge_table[y1][id1].push_back(edge[0]);
@@ -145,7 +141,7 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 			poly1.dy = y1 - y2_1;
 			poly_table[y1][id1] = poly1;
 
-			auto id2 = Scanner::get_id();
+			auto id2 = _id2;
 			edge[0] = create_edge(p2, p3, id2, y2_3, y3);
 			edge[1] = create_edge(p1, p3, id2, y2_3, y3);
 			edge_table[y2_3][id2].push_back(edge[0]);
