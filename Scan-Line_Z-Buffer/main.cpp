@@ -241,57 +241,11 @@ int main(int argc, char* argv[]) {
 	glBindVertexArray(0);
 
 	//display
-	vertex_path = "runtime/shader/display.vs";
-	fragment_path = "runtime/shader/display.fs";
 	GLuint display_program[2];
-	init_shader(vertex_path, fragment_path, display_program[0]);
 	vertex_path = "runtime/shader/line.vs";
 	fragment_path = "runtime/shader/line.fs";
 	init_shader(vertex_path, fragment_path, display_program[1]);
 
-	GLuint display_vao = {0};
-	GLuint display_vbo[2] = {0};
-	GLuint display_ebo;
-
-	glGenVertexArrays(1, &display_vao);
-	glBindVertexArray(display_vao);
-
-	glGenBuffers(1, &display_ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, display_ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangle_indexes.size() * sizeof(int), &(triangle_indexes[0]), GL_STATIC_DRAW);
-
-	vector<float> verts;
-	for (auto& v: vertices) {
-		verts.push_back(v.x);
-		verts.push_back(v.y);
-		verts.push_back(v.z);
-	}
-	vector<float> norms;
-	for (auto& n: normals) {
-		norms.push_back(n.x);
-		norms.push_back(n.y);
-		norms.push_back(n.z);
-	}
-	//vert
-	glGenBuffers(2, display_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(float), &(verts[0]), GL_STATIC_DRAW);
-
-	//norm
-	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, norms.size() * sizeof(float), &(norms[0]), GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, display_vbo[1]);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-	
 	// timing
 	float delta_time = 0.0f;
 	float last_time = 0.0f;
@@ -392,25 +346,6 @@ int main(int argc, char* argv[]) {
 		} else {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glClearColor(0.0f, 0.0f, 0.0f, 1.f);
-
-			//启动着色器程序,在GPU上安装GLSL代码,这不会运行着色器程序，
-			//auto& program = display_program[0];
-			//glUseProgram(program);
-
-			//glBindVertexArray(display_vao);
-
-			//setMat4(program, "view_to_clip_matrix", view_to_clip_mat);
-			//setMat4(program, "world_to_view_matrix", view_mat);
-			//setMat4(program, "inv_world_matrix", inv_world_mat);
-			//setMat4(program, "model", model_mat);
-			//setVec3(program, "direct_light", direct_light);
-
-			//glEnable(GL_DEPTH_TEST);
-			////指定用于深度缓冲比较值；
-			//glDepthFunc(GL_LEQUAL);
-
-			////glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			//glDrawElements(GL_TRIANGLES, triangle_num * 3, GL_UNSIGNED_INT, 0);
 
 			glUseProgram(display_program[1]);
 			glBindVertexArray(box_vao);
