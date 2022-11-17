@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <queue>
 #include <time.h>
 #include "loader/model_loader.h"
 #include "tool/camera.h"
@@ -86,6 +87,90 @@ int main(int argc, char* argv[]) {
 	//octree
 	Octree_Constructor oc;
 	Octree* root = oc.construct(triangle_indexes, vertices);
+
+	std::vector<int> box_indexes;
+	std::vector<float> box_vertices;
+
+	auto add_quad = [&](glm::vec3 const& center, glm::vec3 const& half_length, int dimension) {
+		int i = box_vertices.size() / 3;
+		glm::vec3 a, b, c, d;
+		if (dimension == 3) { // x, y
+			a = center + half_length * glm::vec3(-1, -1,  0);
+			b = center + half_length * glm::vec3( 1, -1,  0);
+			c = center + half_length * glm::vec3( 1,  1,  0);
+			d = center + half_length * glm::vec3(-1,  1,  0);
+		} else if (dimension == 2) { // x, z
+			a = center + half_length * glm::vec3(-1,  0, -1);
+			b = center + half_length * glm::vec3( 1,  0, -1);
+			c = center + half_length * glm::vec3( 1,  0,  1);
+			d = center + half_length * glm::vec3(-1,  0,  1);
+		} else if (dimension == 1) { //y, z
+			a = center + half_length * glm::vec3( 0, -1, -1);
+			b = center + half_length * glm::vec3( 0,  1, -1);
+			c = center + half_length * glm::vec3( 0,  1,  1);
+			d = center + half_length * glm::vec3( 0, -1,  1);
+		}
+		box_vertices.push_back(a.x); box_vertices.push_back(a.y); box_vertices.push_back(a.z);
+		box_vertices.push_back(b.x); box_vertices.push_back(b.y); box_vertices.push_back(b.z);
+		box_vertices.push_back(c.x); box_vertices.push_back(c.y); box_vertices.push_back(c.z);
+		box_vertices.push_back(d.x); box_vertices.push_back(d.y); box_vertices.push_back(d.z);
+		//abd
+		box_indexes.push_back(i + 0);
+		box_indexes.push_back(i + 1);
+		box_indexes.push_back(i + 3);
+		//bcd
+		box_indexes.push_back(i + 1);
+		box_indexes.push_back(i + 2);
+		box_indexes.push_back(i + 3);
+	};
+
+	auto add_box = [&](Bound_Box const& box) {
+		auto& center = box.center;
+		auto& half_length = box.half_length;
+		add_quad(center + glm::vec3(0, 0, half_length.z), half_length, 3);
+		add_quad(center - glm::vec3(0, 0, half_length.z), half_length, 3);
+		add_quad(center + glm::vec3(0, half_length.y, 0), half_length, 2);
+		add_quad(center - glm::vec3(0, half_length.y, 0), half_length, 2);
+		add_quad(center + glm::vec3(half_length.x, 0, 0), half_length, 1);
+		add_quad(center - glm::vec3(half_length.x, 0, 0), half_length, 1);
+	};
+
+	GLuint box_vao = {0};
+	GLuint box_vbo[1] = {0};
+	GLuint box_ebo;
+	{
+		std::queue<Octree *> q;
+		q.push(root);
+		while (!q.empty()) {
+			auto current = q.front();
+			q.pop();
+			add_box(current->box);
+			if (!current->is_leaf) {
+				for (int i = 0; i < 8; i++) {
+					q.push(&(current->children[i]));
+				}
+			}
+		}
+		
+		glGenVertexArrays(1, &box_vao);
+		glBindVertexArray(box_vao);
+
+		glGenBuffers(1, &box_ebo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, box_ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, box_indexes.size() * sizeof(int), &(box_indexes[0]), GL_STATIC_DRAW);
+
+		//vert
+		glGenBuffers(1, box_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, box_vbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, box_vertices.size() * sizeof(float), &(box_vertices[0]), GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, box_vbo[0]);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
 
 
 	//mat 
@@ -171,8 +256,8 @@ int main(int argc, char* argv[]) {
 	glGenVertexArrays(1, &display_vao);
 	glBindVertexArray(display_vao);
 
-	glGenBuffers(1, &ebo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	glGenBuffers(1, &display_ebo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, display_ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangle_indexes.size() * sizeof(int), &(triangle_indexes[0]), GL_STATIC_DRAW);
 
 	vector<float> verts;
@@ -309,23 +394,33 @@ int main(int argc, char* argv[]) {
 			glClearColor(0.0f, 0.0f, 0.0f, 1.f);
 
 			//启动着色器程序,在GPU上安装GLSL代码,这不会运行着色器程序，
-			auto& program = display_program[0];
-			glUseProgram(program);
+			//auto& program = display_program[0];
+			//glUseProgram(program);
 
-			glBindVertexArray(display_vao);
+			//glBindVertexArray(display_vao);
 
-			setMat4(program, "view_to_clip_matrix", view_to_clip_mat);
-			setMat4(program, "world_to_view_matrix", view_mat);
-			setMat4(program, "inv_world_matrix", inv_world_mat);
-			setMat4(program, "model", model_mat);
-			setVec3(program, "direct_light", direct_light);
+			//setMat4(program, "view_to_clip_matrix", view_to_clip_mat);
+			//setMat4(program, "world_to_view_matrix", view_mat);
+			//setMat4(program, "inv_world_matrix", inv_world_mat);
+			//setMat4(program, "model", model_mat);
+			//setVec3(program, "direct_light", direct_light);
 
+			//glEnable(GL_DEPTH_TEST);
+			////指定用于深度缓冲比较值；
+			//glDepthFunc(GL_LEQUAL);
+
+			////glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			//glDrawElements(GL_TRIANGLES, triangle_num * 3, GL_UNSIGNED_INT, 0);
+
+			glUseProgram(display_program[1]);
+			glBindVertexArray(box_vao);
+			setMat4(display_program[1], "view_to_clip_matrix", view_to_clip_mat);
+			setMat4(display_program[1], "world_to_view_matrix", view_mat);
+			setMat4(display_program[1], "model", model_mat);
 			glEnable(GL_DEPTH_TEST);
-			//指定用于深度缓冲比较值；
-			glDepthFunc(GL_LEQUAL);
-
-			//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawElements(GL_TRIANGLES, triangle_num * 3, GL_UNSIGNED_INT, 0);
+			glDepthFunc(GL_LEQUAL); 
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glDrawElements(GL_TRIANGLES, box_indexes.size(), GL_UNSIGNED_INT, 0);
 		}
 
 		/* Swap front and back buffers */
