@@ -7,6 +7,7 @@
 #include <time.h>
 #include "loader/model_loader.h"
 #include "tool/camera.h"
+#include "tool/octree.h"
 #include "scan/scan.h"
 
 #define SCR_WIDTH 1960
@@ -82,7 +83,12 @@ int main(int argc, char* argv[]) {
 	auto vertices = my_model.getOriginVertices();
 	auto normals = my_model.getNormals();
 
-	//mat //todo: move into loop
+	//octree
+	Octree_Constructor oc;
+	Octree* root = oc.construct(triangle_indexes, vertices);
+
+
+	//mat 
 	int width, height;
 	glfwGetFramebufferSize(window, &width, &height);
 	auto aspect = (float)width / (float)height;
