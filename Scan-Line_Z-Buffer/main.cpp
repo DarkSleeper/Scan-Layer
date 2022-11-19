@@ -9,6 +9,7 @@
 #include "loader/model_loader.h"
 #include "tool/camera.h"
 #include "tool/octree.h"
+#include "tool/mipmap.h"
 #include "scan/scan.h"
 
 #define SCR_WIDTH 1960
@@ -188,6 +189,9 @@ int main(int argc, char* argv[]) {
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
 	float* z_buffer = new float[SCR_WIDTH * SCR_HEIGHT];
 	int scale_z = (width + height) / 2;
+	for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
+		z_buffer[i] = scale_z;
+	}
 	std::vector<bool> has_drawed(triangle_num, false);
 
 	////image
@@ -301,7 +305,10 @@ int main(int argc, char* argv[]) {
 			colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
 		}
 
-		//clear depth
+		// construct mipmap with last frame z_buffer
+		MipMap mm(SCR_WIDTH, SCR_HEIGHT, z_buffer);
+
+		// clear depth
 		for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
 			z_buffer[i] = scale_z;
 		}
