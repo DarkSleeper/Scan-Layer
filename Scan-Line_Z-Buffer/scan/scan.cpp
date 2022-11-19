@@ -3,17 +3,34 @@
 #include <math.h>
 #include <list>
 
-Scanner::Scanner(int screen_width, int screen_height) 
+Scanner::Scanner(int screen_width, int screen_height, int screen_scale_z)
 {
 	width = screen_width;
 	height = screen_height;
-	scale_z = (width + height) / 2;
+	scale_z = screen_scale_z;
 	poly_table.resize(screen_height + 1);
 	edge_table.resize(screen_height + 1);
+	max_id = 0;
 }
 
-void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors) 
+size_t Scanner::get_id() {
+	max_id++;
+	return max_id;
+}
+
+void Scanner::clear_table() {
+	for (auto& m: poly_table) {
+		m.clear();
+	}
+	for (auto& m: edge_table) {
+		m.clear();
+	}
+}
+
+void Scanner::init(std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors) 
 {
+	clear_table();
+
 	auto in_bound = [](glm::vec3 v) -> bool {
 		return (v.x >= -1.f && v.x <= 1.f) && (v.y >= -1.f && v.y <= 1.f) && (v.z >= -1.f && v.z <= 1.f);
 	};
@@ -64,11 +81,11 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		return std::move(edge);
 	};
 
-	int triangle_num = triangle_indexes.size() / 3;
+	int triangle_num = vertex_num / 3;
 	for (int i = 0; i < triangle_num; i++) {
-		int _a = triangle_indexes[3 * i];
-		int _b = triangle_indexes[3 * i + 1];
-		int _c = triangle_indexes[3 * i + 2];
+		int _a = 3 * i;
+		int _b = 3 * i + 1;
+		int _c = 3 * i + 2;
 		if (_a == _b || _a == _c || _b == _c) continue;
 		if (!is_valid[_a] || !is_valid[_b] || !is_valid[_c]) continue; //todo: clip, 先简单把有在范围外的点的三角形整个排除
 		auto p1 = vertices[_a];
@@ -96,8 +113,8 @@ void Scanner::init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& v
 		int y2_1 = (int)(p2.y + 0.5);
 		int y2_3 = (int)(p2.y - 0.5);
 		int y3 = (int)(p3.y + 0.5);
-		size_t _id1 = 2 * i + 0;
-		size_t _id2 = 2 * i + 1;
+		size_t _id1 = get_id();
+		size_t _id2 = get_id();
 		if (p1.y == p2.y && p2.y == p3.y) {
 			float xmax = fmax(p1.x, fmax(p2.x, p3.x));
 			float xmin = fmin(p1.x, fmin(p2.x, p3.x));
@@ -181,14 +198,14 @@ AEL_Node create_alive_edge(ET_Node const& e1, ET_Node const& e2, PT_Node const& 
 
 //vector<map<size_t, PT_Node>> poly_table;
 //vector<map<size_t, vector<ET_Node>>> edge_table;
-void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
+void Scanner::update(unsigned char* frame_buffer, float* z_buffer)
 {
 	std::unordered_map<size_t, APL_Node> alive_poly_list;
 	std::list<AEL_Node> alive_edge_list;
 
 	for (int cur_y = height; cur_y > 0; cur_y--) {
-		std::vector<glm::vec4> line_color(width, background_color);
-		std::vector<float> line_z(width, scale_z); //0<=z<=scale_z
+		auto line_color = frame_buffer + (cur_y - 1) * width * 4;
+		auto line_z = z_buffer + (cur_y - 1) * width; //0<=z<=scale_z
 		//add new poly
 		if (poly_table[cur_y].size() > 0) {
 			for (auto& iter: poly_table[cur_y]) {
@@ -229,7 +246,11 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 				if (idx < 0) continue;
 				if (zx < line_z[idx]) {
 					line_z[idx] = zx;
-					line_color[idx] = alive_poly_list[ae.id].color;
+					auto cl = alive_poly_list[ae.id].color;
+					line_color[idx * 4 + 0] = (unsigned char)cl.r;
+					line_color[idx * 4 + 1] = (unsigned char)cl.g;
+					line_color[idx * 4 + 2] = (unsigned char)cl.b;
+					line_color[idx * 4 + 3] = (unsigned char)cl.a;
 				}
 				zx = zx + ae.dzx;
 			}
@@ -250,32 +271,6 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 			it->dyl -= 1;
 			it->dyr -= 1;
 			if (it->dyl < 0 || it->dyr < 0) {
-				////todo
-				//if (it->dyl < 0 && it->dyr < 0) {
-				//	alive_edge_list.erase(it++);
-				//	continue;
-				//}
-				//if (alive_poly_list.count(it->id) == 0) {
-				//	alive_edge_list.erase(it++);
-				//	continue;
-				//}
-				//if (cur_y == 1) {
-				//	it++;
-				//	continue;
-				//}
-				//auto& poly = alive_poly_list[it->id];
-				//auto& new_e = edge_table[cur_y - 1][it->id][0];
-				//if (it->dyl < 0) {
-				//	it->xl = new_e.x;
-				//	it->dxl = new_e.dx;
-				//	it->dyl = new_e.dy;
-				//	it->zl = -1.0f / poly.c * (poly.a * new_e.x + poly.b * (cur_y - 1) + poly.d);
-				//} else {
-				//	it->xr = new_e.x;
-				//	it->dxr = new_e.dx;
-				//	it->dyr = new_e.dy;
-				//}
-				//next_edges.push_back(*it);
 				alive_edge_list.erase(it++);
 				continue;
 			}
@@ -288,12 +283,5 @@ void Scanner::update(unsigned char* frame_buffer, glm::vec4 background_color)
 			alive_edge_list.push_back(ae);
 		}
 
-		for (int i = 0; i < width; i++) {
-			auto idx = (cur_y - 1) * width + i;
-			frame_buffer[idx * 4 + 0] = (unsigned char)(line_color[i].r);
-			frame_buffer[idx * 4 + 1] = (unsigned char)(line_color[i].g);
-			frame_buffer[idx * 4 + 2] = (unsigned char)(line_color[i].b);
-			frame_buffer[idx * 4 + 3] = (unsigned char)(line_color[i].a);
-		}
 	}
 }

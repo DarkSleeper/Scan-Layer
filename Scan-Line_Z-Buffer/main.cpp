@@ -34,7 +34,7 @@ void processInput(GLFWwindow* window);
 
 void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 
-bool if_scan = false;
+bool if_scan = true;
 
 int main(int argc, char* argv[]) {
 	string model_name = "runtime/model/bunny.obj";
@@ -186,6 +186,9 @@ int main(int argc, char* argv[]) {
 	glm::vec3 Up(0, 1, 0);
 
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
+	float* z_buffer = new float[SCR_WIDTH * SCR_HEIGHT];
+	int scale_z = (width + height) / 2;
+	std::vector<bool> has_drawed(triangle_num, false);
 
 	////image
 	GLuint texture;
@@ -280,49 +283,99 @@ int main(int argc, char* argv[]) {
 		}
 		processInput(window);
 
-		//clock_t start, stop;
-		//start = clock();
-		//Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
-		//glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);
+		clock_t start, stop;
+		start = clock();
+		Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
+		glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);
 
-		//std::vector<glm::vec3> screen_vertices(vertex_num);
-		//for (int i = 0; i < vertex_num; i++) {
-		//	auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
-		//	screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
-		//}
-		//std::vector<glm::vec4> colors(vertex_num);
-		//for (int i = 0; i < vertex_num; i++) {
-		//	auto norm = normals[i];
-		//	glm::normalize(norm);
-		//	auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
-		//	colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
-		//}
+		std::vector<glm::vec3> screen_vertices(vertex_num);
+		for (int i = 0; i < vertex_num; i++) {
+			auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(vertices[i], 1.0f)));
+			screen_vertices[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w;
+		}
+		std::vector<glm::vec4> colors(vertex_num);
+		for (int i = 0; i < vertex_num; i++) {
+			auto norm = normals[i];
+			glm::normalize(norm);
+			auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
+			colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
+		}
 
-		////add to table
-		//Scanner scanner(SCR_WIDTH, SCR_HEIGHT);
-		//scanner.init(triangle_indexes, screen_vertices, colors);
+		//clear depth
+		for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
+			z_buffer[i] = scale_z;
+		}
+		for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
+			auto idx = i;
+			img_data[idx * 4 + 0] = (unsigned char)(0);
+			img_data[idx * 4 + 1] = (unsigned char)(0);
+			img_data[idx * 4 + 2] = (unsigned char)(0);
+			img_data[idx * 4 + 3] = (unsigned char)(255);
+		}
+		for (int i = 0; i < triangle_num; i++) {
+			has_drawed[i] = false;
+		}
 
-		////z-buffer algorithm and img output
-		//scanner.update(img_data, glm::vec4(0, 0, 0, 255));
+		Scanner scanner(SCR_WIDTH, SCR_HEIGHT, scale_z);
+		//add to table
+		//z-buffer algorithm and img output
+		//todo
+		//test for distribute launch
+		{
+			std::queue<Octree*> q;
+			q.push(root);
+			while (!q.empty()) {
+				auto current = q.front();
+				q.pop();
+				//add_box(current->box);
+				if (current->is_leaf && current->data.size() > 0) {
+					std::vector<glm::vec3> vs;
+					std::vector<glm::vec4> cs;
+					for (auto node: current->data) {
+						auto t_offset = node.id;
+						if (has_drawed[t_offset]) continue;
+						has_drawed[t_offset] = true;
+						auto idx1 = triangle_indexes[t_offset * 3];
+						auto idx2 = triangle_indexes[t_offset * 3 + 1];
+						auto idx3 = triangle_indexes[t_offset * 3 + 2];
+						vs.push_back(screen_vertices[idx1]);
+						vs.push_back(screen_vertices[idx2]);
+						vs.push_back(screen_vertices[idx3]);
+						cs.push_back(colors[idx1]);
+						cs.push_back(colors[idx2]);
+						cs.push_back(colors[idx3]);
+					}
+					if (vs.size() != 0) {
+						scanner.init(vs, cs);
+						scanner.update(img_data, z_buffer);
+					}
+				}
+				if (!current->is_leaf) {
+					for (int i = 0; i < 8; i++) {
+						q.push(&(current->children[i]));
+					}
+				}
+			}
+		}
 
-		////image
-		//glBindTexture(GL_TEXTURE_2D, texture);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		//glBindTexture(GL_TEXTURE_2D, 0);
+		//image
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-		//stop = clock();
-		//double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
-		//std::cout << duration << std::endl;
-		//if (camera_theta > 360) {
-		//	avg_time += duration;
-		//	frame_cnt++;
-		//}
-		//camera_theta += STEP;
-		//if (camera_theta >= 360 * 3) break;
+		stop = clock();
+		double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
+		std::cout << duration << std::endl;
+		if (camera_theta > 360) {
+			avg_time += duration;
+			frame_cnt++;
+		}
+		camera_theta += STEP;
+		if (camera_theta >= 360 * 3) break;
 
 		glm::mat4 view_mat = camera.GetViewMatrix();
 		glm::mat4 inv_world_mat = glm::inverse(view_mat);

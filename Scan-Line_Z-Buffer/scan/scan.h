@@ -45,14 +45,18 @@ struct AEL_Node {
 
 struct Scanner {
 public:
-	Scanner(int screen_width, int screen_height);
-	void init(std::vector<int>& triangle_indexes, std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors);
-	void update(unsigned char* frame_buffer, glm::vec4 background_color);
+	Scanner(int screen_width, int screen_height, int screen_scale_z);
+	void init(std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors);
+	void update(unsigned char* frame_buffer, float* z_buffer);
 
 private:
+	size_t get_id();
+	void clear_table();
+
 	int width;
 	int height;
 	int scale_z;
+	size_t max_id;
 	std::vector<std::unordered_map<size_t, PT_Node>> poly_table;
 	std::vector<std::unordered_map<size_t, std::vector<ET_Node>>> edge_table;
 };
