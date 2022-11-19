@@ -55,22 +55,6 @@ void MipMap::init_data() {
 }
 
 float MipMap::get_far_z(glm::vec2 rec_min, glm::vec2 rec_max) {
-	int cur_width = max_width;
-	int cur_height = max_height;
-	auto next_level_pos = [&](glm::vec2 pos) -> glm::vec2 {
-		glm::vec2 res;
-		if (pos.x < cur_width - 1 || cur_width % 2 == 0) {
-			res.x = pos.x / 2;
-		} else {
-			res.x = (cur_width - 1) / 2 + pos.x - (cur_width - 1);
-		}
-		if (pos.y < cur_height - 1 || cur_height % 2 == 0) {
-			res.y = pos.y / 2;
-		} else {
-			res.y = (cur_height - 1) / 2 + pos.y - (cur_height - 1);
-		}
-		return res;
-	};
 	int fit_level = 0;
 	while (fit_level < level) {
 		int a = (int)rec_max.x - (int)rec_min.x;
@@ -89,10 +73,8 @@ float MipMap::get_far_z(glm::vec2 rec_min, glm::vec2 rec_max) {
 			return fmaxf(m1, m2);
 		}
 
-		rec_min = next_level_pos(rec_min);
-		rec_max = next_level_pos(rec_max);
-		cur_width = (cur_width + 1) / 2;
-		cur_width = (cur_height + 1) / 2;
+		rec_min = rec_min / 2.f;
+		rec_max = rec_max / 2.f;
 		fit_level++;
 	}
 	return -1; //never reach
