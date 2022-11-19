@@ -61,13 +61,13 @@ float MipMap::get_far_z(glm::vec2 rec_min, glm::vec2 rec_max) {
 		int b = (int)rec_max.y - (int)rec_min.y;
 		int l = a > b ? a : b;
 		if (l == 0) {
-			return datas[fit_level][(int)rec_max.x][(int)rec_max.y];
+			return datas[fit_level][(int)rec_max.y][(int)rec_max.x];
 		}
 		if (l == 1) {
-			float z1 = datas[fit_level][(int)rec_max.x][(int)rec_max.y];
-			float z2 = datas[fit_level][(int)rec_min.x][(int)rec_max.y];
-			float z3 = datas[fit_level][(int)rec_max.x][(int)rec_min.y];
-			float z4 = datas[fit_level][(int)rec_min.x][(int)rec_min.y];
+			float z1 = datas[fit_level][(int)rec_max.y][(int)rec_max.x];
+			float z2 = datas[fit_level][(int)rec_max.y][(int)rec_min.x];
+			float z3 = datas[fit_level][(int)rec_min.y][(int)rec_max.x];
+			float z4 = datas[fit_level][(int)rec_min.y][(int)rec_min.x];
 			auto m1 = fmaxf(z1, z2);
 			auto m2 = fmaxf(z3, z4);
 			return fmaxf(m1, m2);
