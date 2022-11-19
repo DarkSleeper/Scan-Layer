@@ -53,3 +53,47 @@ void MipMap::init_data() {
 		level++;
 	}
 }
+
+float MipMap::get_far_z(glm::vec2 rec_min, glm::vec2 rec_max) {
+	int cur_width = max_width;
+	int cur_height = max_height;
+	auto next_level_pos = [&](glm::vec2 pos) -> glm::vec2 {
+		glm::vec2 res;
+		if (pos.x < cur_width - 1 || cur_width % 2 == 0) {
+			res.x = pos.x / 2;
+		} else {
+			res.x = (cur_width - 1) / 2 + pos.x - (cur_width - 1);
+		}
+		if (pos.y < cur_height - 1 || cur_height % 2 == 0) {
+			res.y = pos.y / 2;
+		} else {
+			res.y = (cur_height - 1) / 2 + pos.y - (cur_height - 1);
+		}
+		return res;
+	};
+	int fit_level = 0;
+	while (fit_level < level) {
+		int a = (int)rec_max.x - (int)rec_min.x;
+		int b = (int)rec_max.y - (int)rec_min.y;
+		int l = a > b ? a : b;
+		if (l == 0) {
+			return datas[fit_level][(int)rec_max.x][(int)rec_max.y];
+		}
+		if (l == 1) {
+			float z1 = datas[fit_level][(int)rec_max.x][(int)rec_max.y];
+			float z2 = datas[fit_level][(int)rec_min.x][(int)rec_max.y];
+			float z3 = datas[fit_level][(int)rec_max.x][(int)rec_min.y];
+			float z4 = datas[fit_level][(int)rec_min.x][(int)rec_min.y];
+			auto m1 = fmaxf(z1, z2);
+			auto m2 = fmaxf(z3, z4);
+			return fmaxf(m1, m2);
+		}
+
+		rec_min = next_level_pos(rec_min);
+		rec_max = next_level_pos(rec_max);
+		cur_width = (cur_width + 1) / 2;
+		cur_width = (cur_height + 1) / 2;
+		fit_level++;
+	}
+	return -1; //never reach
+}

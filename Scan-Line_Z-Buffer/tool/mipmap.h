@@ -8,6 +8,7 @@ public:
 
 private:
 	void init_data();
+	float get_far_z(glm::vec2 rec_min, glm::vec2 rec_max);
 	std::vector<std::vector<std::vector<float>>> datas;
 	int level;
 	int max_width;
