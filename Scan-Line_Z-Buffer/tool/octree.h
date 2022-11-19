@@ -20,7 +20,7 @@ struct Octree {
 	std::vector<Octree> children; // size = 8
 	std::vector<Node_Data> data; // id pointing to triangle
 
-	const int max_depth = 7;
+	const int max_depth = 5;
 	const int max_data_num = 5;
 };
 
