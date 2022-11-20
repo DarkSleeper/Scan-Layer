@@ -79,3 +79,53 @@ float MipMap::get_far_z(glm::vec2 rec_min, glm::vec2 rec_max) {
 	}
 	return -1; //never reach
 }
+
+void MipMap::update_point(float pos_x, float pos_y, float z_value) {
+	int cur_width = max_width;
+	int cur_height = max_height;
+	int cur_level = 0;
+	while (cur_level < level) {
+		int next_width = (cur_width + 1) / 2;
+		int next_height = (cur_height + 1) / 2;
+
+		int x = pos_x;
+		int y = pos_y;
+		datas[cur_level][y][x] = 0;
+
+		//compare neighbours
+		bool should_update = false;
+		if (x % 2 == 1) x -= 1;
+		if (y % 2 == 1) y -= 1;
+
+		if (x == cur_width - 1) {
+			if (y == cur_height - 1) {
+				// one point
+				should_update = true;
+			} else {
+				if (z_value > datas[cur_level][y][x] && z_value > datas[cur_level][y + 1][x])
+					should_update = true;
+			}
+		} else {
+			if (y == cur_height - 1) {
+				if (z_value > datas[cur_level][y][x] && z_value > datas[cur_level][y][x + 1])
+					should_update = true;
+			} else {
+				if (z_value > datas[cur_level][y][x] && z_value > datas[cur_level][y][x + 1] &&
+					z_value > datas[cur_level][y + 1][x] && z_value > datas[cur_level][y + 1][x + 1])
+					should_update = true;
+			}
+		}
+
+		x = pos_x;
+		y = pos_y;
+		datas[cur_level][y][x] = z_value;
+
+		if (!should_update) break;
+
+		pos_x = pos_x / 2.f;
+		pos_y = pos_y / 2.f;
+		cur_width = next_width;
+		cur_height = next_height;
+		cur_level++;
+	}
+}

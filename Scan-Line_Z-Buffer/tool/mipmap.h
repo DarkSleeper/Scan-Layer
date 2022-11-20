@@ -6,6 +6,7 @@ struct MipMap {
 public:
 	MipMap(int screen_width, int screen_height, const float* level_0_buffer);
 	float get_far_z(glm::vec2 rec_min, glm::vec2 rec_max);
+	void update_point(float pos_x, float pos_y, float z_value);
 
 private:
 	void init_data();
