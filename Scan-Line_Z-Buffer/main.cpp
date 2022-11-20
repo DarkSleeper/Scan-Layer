@@ -89,11 +89,11 @@ int main(int argc, char* argv[]) {
 	Octree_Constructor oc;
 	Octree* root = oc.construct(triangle_indexes, vertices);
 
-	std::vector<int> box_indexes;
-	std::vector<float> box_vertices;
+	std::vector<int> _box_indexes;
+	std::vector<float> _box_vertices;
 
 	auto add_quad = [&](glm::vec3 const& center, glm::vec3 const& half_length, int dimension) {
-		int i = box_vertices.size() / 3;
+		int i = _box_vertices.size() / 3;
 		glm::vec3 a, b, c, d;
 		if (dimension == 3) { // x, y
 			a = center + half_length * glm::vec3(-1, -1,  0);
@@ -111,18 +111,18 @@ int main(int argc, char* argv[]) {
 			c = center + half_length * glm::vec3( 0,  1,  1);
 			d = center + half_length * glm::vec3( 0, -1,  1);
 		}
-		box_vertices.push_back(a.x); box_vertices.push_back(a.y); box_vertices.push_back(a.z);
-		box_vertices.push_back(b.x); box_vertices.push_back(b.y); box_vertices.push_back(b.z);
-		box_vertices.push_back(c.x); box_vertices.push_back(c.y); box_vertices.push_back(c.z);
-		box_vertices.push_back(d.x); box_vertices.push_back(d.y); box_vertices.push_back(d.z);
+		_box_vertices.push_back(a.x); _box_vertices.push_back(a.y); _box_vertices.push_back(a.z);
+		_box_vertices.push_back(b.x); _box_vertices.push_back(b.y); _box_vertices.push_back(b.z);
+		_box_vertices.push_back(c.x); _box_vertices.push_back(c.y); _box_vertices.push_back(c.z);
+		_box_vertices.push_back(d.x); _box_vertices.push_back(d.y); _box_vertices.push_back(d.z);
 		//abd
-		box_indexes.push_back(i + 0);
-		box_indexes.push_back(i + 1);
-		box_indexes.push_back(i + 3);
+		_box_indexes.push_back(i + 0);
+		_box_indexes.push_back(i + 1);
+		_box_indexes.push_back(i + 3);
 		//bcd
-		box_indexes.push_back(i + 1);
-		box_indexes.push_back(i + 2);
-		box_indexes.push_back(i + 3);
+		_box_indexes.push_back(i + 1);
+		_box_indexes.push_back(i + 2);
+		_box_indexes.push_back(i + 3);
 	};
 
 	auto add_box = [&](Bound_Box const& box) {
@@ -158,12 +158,12 @@ int main(int argc, char* argv[]) {
 
 		glGenBuffers(1, &box_ebo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, box_ebo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, box_indexes.size() * sizeof(int), &(box_indexes[0]), GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, _box_indexes.size() * sizeof(int), &(_box_indexes[0]), GL_STATIC_DRAW);
 
 		//vert
 		glGenBuffers(1, box_vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, box_vbo[0]);
-		glBufferData(GL_ARRAY_BUFFER, box_vertices.size() * sizeof(float), &(box_vertices[0]), GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, _box_vertices.size() * sizeof(float), &(_box_vertices[0]), GL_STATIC_DRAW);
 
 		glBindBuffer(GL_ARRAY_BUFFER, box_vbo[0]);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -188,7 +188,7 @@ int main(int argc, char* argv[]) {
 
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
 	float* z_buffer = new float[SCR_WIDTH * SCR_HEIGHT];
-	int scale_z = (width + height) / 2;
+	int scale_z = (SCR_WIDTH + SCR_HEIGHT) / 2;
 	for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
 		z_buffer[i] = scale_z;
 	}
@@ -327,14 +327,47 @@ int main(int argc, char* argv[]) {
 		//add to table
 		//z-buffer algorithm and img output
 		//todo
-		//test for distribute launch
+		//return false if blocked
+		auto test_box = [&](Bound_Box box)->bool {
+			auto in_bound = [](glm::vec3 v) -> bool {
+				return (v.x >= -1.f && v.x <= 1.f) && (v.y >= -1.f && v.y <= 1.f) && (v.z >= -1.f && v.z <= 1.f);
+			};
+			std::vector<glm::vec3> box_verts;
+			for (int i = 0; i < 8; i++) {
+				glm::vec3 k(1, 1, 1);
+				if ((i & 1) != 0) k.x = -1;
+				if ((i & 2) != 0) k.y = -1;
+				if ((i & 4) != 0) k.z = -1;
+				box_verts.push_back(box.center + box.half_length * k);
+			}
+			float near_z = scale_z;
+			glm::vec2 rec_max(0, 0), rec_min(SCR_WIDTH, SCR_HEIGHT);
+			for (int i = 0; i < 8; i++) {
+				auto scr_v = view_to_clip_mat * (world_to_view_mat * (model_mat * glm::vec4(box_verts[i], 1.0f)));
+				box_verts[i] = glm::vec3(scr_v.x, scr_v.y, scr_v.z) / scr_v.w; 
+				if (!in_bound(box_verts[i])) return true;
+				box_verts[i].x = (box_verts[i].x + 1) / 2.0f * SCR_WIDTH;
+				box_verts[i].y = (box_verts[i].y + 1) / 2.0f * SCR_HEIGHT;
+				box_verts[i].z = (box_verts[i].z + 1) / 2.0f * scale_z;
+				if (box_verts[i].z < near_z) {
+					near_z = box_verts[i].z;
+				}
+				rec_min.x = fminf(rec_min.x, box_verts[i].x);
+				rec_min.y = fminf(rec_min.y, box_verts[i].y);
+				rec_max.x = fmaxf(rec_max.x, box_verts[i].x);
+				rec_max.y = fmaxf(rec_max.y, box_verts[i].y);
+			}
+			float mm_far_z = mm.get_far_z(rec_min, rec_max);
+			if (mm_far_z < near_z) return false;
+			else return true;
+		};
 		{
 			std::queue<Octree*> q;
 			q.push(root);
 			while (!q.empty()) {
 				auto current = q.front();
 				q.pop();
-				//add_box(current->box);
+				if (!test_box(current->box)) continue;
 				if (current->is_leaf && current->data.size() > 0) {
 					std::vector<glm::vec3> vs;
 					std::vector<glm::vec4> cs;
@@ -381,7 +414,7 @@ int main(int argc, char* argv[]) {
 			avg_time += duration;
 			frame_cnt++;
 		}
-		camera_theta += STEP;
+		//camera_theta += STEP;
 		if (camera_theta >= 360 * 3) break;
 
 		glm::mat4 view_mat = camera.GetViewMatrix();
@@ -415,7 +448,7 @@ int main(int argc, char* argv[]) {
 			glEnable(GL_DEPTH_TEST);
 			glDepthFunc(GL_LEQUAL); 
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			glDrawElements(GL_TRIANGLES, box_indexes.size(), GL_UNSIGNED_INT, 0);
+			glDrawElements(GL_TRIANGLES, _box_indexes.size(), GL_UNSIGNED_INT, 0);
 		}
 
 		/* Swap front and back buffers */
