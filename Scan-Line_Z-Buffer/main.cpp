@@ -289,10 +289,11 @@ int main(int argc, char* argv[]) {
 		}
 		processInput(window);
 
-		clock_t start, stop;
-		start = clock();
 		Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
 		glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);
+
+		clock_t start, stop;
+		start = clock();
 
 		std::vector<glm::vec3> screen_vertices(vertex_num);
 		for (int i = 0; i < vertex_num; i++) {
@@ -397,15 +398,6 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		//image
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
 		stop = clock();
 		double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
 		std::cout << duration << std::endl;
@@ -414,7 +406,16 @@ int main(int argc, char* argv[]) {
 			frame_cnt++;
 		}
 		camera_theta += STEP;
-		if (camera_theta >= 360 * 3) break;
+		if (camera_theta >= 360 * 2) break;
+
+		//image
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		glm::mat4 view_mat = camera.GetViewMatrix();
 		glm::mat4 inv_world_mat = glm::inverse(view_mat);

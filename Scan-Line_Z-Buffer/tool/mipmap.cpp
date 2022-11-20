@@ -93,28 +93,14 @@ void MipMap::update_point(float pos_x, float pos_y, float z_value) {
 		datas[cur_level][y][x] = 0;
 
 		//compare neighbours
-		bool should_update = false;
+		bool should_update = true;
 		if (x % 2 == 1) x -= 1;
 		if (y % 2 == 1) y -= 1;
 
-		if (x == cur_width - 1) {
-			if (y == cur_height - 1) {
-				// one point
-				should_update = true;
-			} else {
-				if (z_value > datas[cur_level][y][x] && z_value > datas[cur_level][y + 1][x])
-					should_update = true;
-			}
-		} else {
-			if (y == cur_height - 1) {
-				if (z_value > datas[cur_level][y][x] && z_value > datas[cur_level][y][x + 1])
-					should_update = true;
-			} else {
-				if (z_value > datas[cur_level][y][x] && z_value > datas[cur_level][y][x + 1] &&
-					z_value > datas[cur_level][y + 1][x] && z_value > datas[cur_level][y + 1][x + 1])
-					should_update = true;
-			}
-		}
+		if (z_value < datas[cur_level][y][x]) should_update = false;
+		else if (x < cur_width - 1 && z_value < datas[cur_level][y][x + 1]) should_update = false;
+		else if (y < cur_height - 1 && z_value < datas[cur_level][y + 1][x]) should_update = false;
+		else if (x < cur_width - 1 && y < cur_height - 1 && z_value < datas[cur_level][y + 1][x + 1]) should_update = false;
 
 		x = pos_x;
 		y = pos_y;
