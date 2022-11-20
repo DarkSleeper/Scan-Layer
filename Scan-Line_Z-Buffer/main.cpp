@@ -328,10 +328,10 @@ int main(int argc, char* argv[]) {
 		//z-buffer algorithm and img output
 		//todo
 		//return false if blocked
+		auto in_bound = [](glm::vec3 v) -> bool {
+			return (v.x >= -1.f && v.x <= 1.f) && (v.y >= -1.f && v.y <= 1.f) && (v.z >= -1.f && v.z <= 1.f);
+		};
 		auto test_box = [&](Bound_Box box)->bool {
-			auto in_bound = [](glm::vec3 v) -> bool {
-				return (v.x >= -1.f && v.x <= 1.f) && (v.y >= -1.f && v.y <= 1.f) && (v.z >= -1.f && v.z <= 1.f);
-			};
 			std::vector<glm::vec3> box_verts;
 			for (int i = 0; i < 8; i++) {
 				glm::vec3 k(1, 1, 1);
