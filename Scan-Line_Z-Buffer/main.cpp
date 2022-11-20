@@ -14,7 +14,7 @@
 
 #define SCR_WIDTH 1960
 #define SCR_HEIGHT 1080
-#define STEP 10
+#define STEP 1
 const float pai = 3.1415926f;
 
 float toRadians(float degrees) {
@@ -189,9 +189,6 @@ int main(int argc, char* argv[]) {
 	unsigned char* img_data = new unsigned char[SCR_WIDTH * SCR_HEIGHT * 4];
 	float* z_buffer = new float[SCR_WIDTH * SCR_HEIGHT];
 	int scale_z = (SCR_WIDTH + SCR_HEIGHT) / 2;
-	for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
-		z_buffer[i] = scale_z;
-	}
 	std::vector<bool> has_drawed(triangle_num, false);
 
 	////image
@@ -273,6 +270,11 @@ int main(int argc, char* argv[]) {
 		glUniform3fv(glGetUniformLocation(program, name.c_str()), 1, &value[0]);
 	};
 
+	for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
+		z_buffer[i] = scale_z;
+	}
+	// construct mipmap with z_buffer
+	MipMap mm(SCR_WIDTH, SCR_HEIGHT, z_buffer);
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
@@ -304,9 +306,6 @@ int main(int argc, char* argv[]) {
 			auto col = (norm + glm::vec3(1.0f)) / 2.0f * 255.0f;
 			colors[i] = glm::vec4((int)col.x, (int)col.y, (int)col.z, 255.0f);
 		}
-
-		// construct mipmap with last frame z_buffer
-		MipMap mm(SCR_WIDTH, SCR_HEIGHT, z_buffer);
 
 		// clear depth
 		for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
@@ -387,7 +386,7 @@ int main(int argc, char* argv[]) {
 					}
 					if (vs.size() != 0) {
 						scanner.init(vs, cs);
-						scanner.update(img_data, z_buffer);
+						scanner.update(img_data, z_buffer, mm);
 					}
 				}
 				if (!current->is_leaf) {
@@ -414,7 +413,7 @@ int main(int argc, char* argv[]) {
 			avg_time += duration;
 			frame_cnt++;
 		}
-		//camera_theta += STEP;
+		camera_theta += STEP;
 		if (camera_theta >= 360 * 3) break;
 
 		glm::mat4 view_mat = camera.GetViewMatrix();
