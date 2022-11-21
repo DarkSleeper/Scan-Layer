@@ -38,7 +38,7 @@ void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 bool if_scan = true;
 
 int main(int argc, char* argv[]) {
-	string model_name = "runtime/model/bunny.obj";
+	string model_name = "runtime/model/sphere_group-3.obj";
 	if (argc == 2) {
 		model_name = string("runtime/model/") + argv[1] + ".obj";
 	}
