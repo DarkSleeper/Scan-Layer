@@ -198,7 +198,7 @@ AEL_Node create_alive_edge(ET_Node const& e1, ET_Node const& e2, PT_Node const& 
 
 //vector<map<size_t, PT_Node>> poly_table;
 //vector<map<size_t, vector<ET_Node>>> edge_table;
-void Scanner::update(unsigned char* frame_buffer, float* z_buffer, MipMap& mm)
+void Scanner::update(unsigned char* frame_buffer, float* z_buffer)
 {
 	std::unordered_map<size_t, APL_Node> alive_poly_list;
 	std::list<AEL_Node> alive_edge_list;
@@ -246,7 +246,7 @@ void Scanner::update(unsigned char* frame_buffer, float* z_buffer, MipMap& mm)
 				if (idx < 0) continue;
 				if (zx < line_z[idx]) {
 					line_z[idx] = zx;
-					mm.update_point(idx + 0.5f, cur_y + 0.5f, zx);
+					//mm.update_point(idx + 0.5f, cur_y + 0.5f, zx);
 					auto cl = alive_poly_list[ae.id].color;
 					line_color[idx * 4 + 0] = (unsigned char)cl.r;
 					line_color[idx * 4 + 1] = (unsigned char)cl.g;

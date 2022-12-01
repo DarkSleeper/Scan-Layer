@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
-#include "../tool/mipmap.h"
+//#include "../tool/mipmap.h"
 
 //classified polygon table
 struct PT_Node {
@@ -48,7 +48,7 @@ struct Scanner {
 public:
 	Scanner(int screen_width, int screen_height, int screen_scale_z);
 	void init(std::vector<glm::vec3>& vertices, std::vector<glm::vec4>& colors);
-	void update(unsigned char* frame_buffer, float* z_buffer, MipMap& mm);
+	void update(unsigned char* frame_buffer, float* z_buffer);
 
 private:
 	size_t get_id();

@@ -38,7 +38,7 @@ void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 bool if_scan = true;
 
 int main(int argc, char* argv[]) {
-	string model_name = "runtime/model/sphere_group-3.obj";
+	string model_name = "runtime/model/sphere_group.obj";
 	if (argc == 2) {
 		model_name = string("runtime/model/") + argv[1] + ".obj";
 	}
@@ -273,8 +273,6 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < SCR_WIDTH * SCR_HEIGHT; i++) {
 		z_buffer[i] = scale_z;
 	}
-	// construct mipmap with z_buffer
-	MipMap mm(SCR_WIDTH, SCR_HEIGHT, z_buffer);
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
@@ -294,6 +292,8 @@ int main(int argc, char* argv[]) {
 
 		clock_t start, stop;
 		start = clock();
+		// construct mipmap with z_buffer
+		MipMap mm(SCR_WIDTH, SCR_HEIGHT, z_buffer);
 
 		std::vector<glm::vec3> screen_vertices(vertex_num);
 		for (int i = 0; i < vertex_num; i++) {
@@ -364,10 +364,15 @@ int main(int argc, char* argv[]) {
 		{
 			std::queue<Octree*> q;
 			q.push(root);
+			int cnt = 0;
 			while (!q.empty()) {
 				auto current = q.front();
 				q.pop();
-				if (!test_box(current->box)) continue;
+				if (!test_box(current->box))
+				{
+					cnt++;
+					continue;
+				}
 				if (current->is_leaf && current->data.size() > 0) {
 					std::vector<glm::vec3> vs;
 					std::vector<glm::vec4> cs;
@@ -387,7 +392,7 @@ int main(int argc, char* argv[]) {
 					}
 					if (vs.size() != 0) {
 						scanner.init(vs, cs);
-						scanner.update(img_data, z_buffer, mm);
+						scanner.update(img_data, z_buffer);
 					}
 				}
 				if (!current->is_leaf) {
@@ -396,6 +401,7 @@ int main(int argc, char* argv[]) {
 					}
 				}
 			}
+			//cout << cnt << endl;
 		}
 
 		stop = clock();

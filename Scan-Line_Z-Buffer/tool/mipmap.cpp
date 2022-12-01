@@ -90,26 +90,25 @@ void MipMap::update_point(float pos_x, float pos_y, float z_value) {
 
 		int x = pos_x;
 		int y = pos_y;
-		datas[cur_level][y][x] = 0;
-
-		//compare neighbours
-		bool should_update = true;
-		if (x % 2 == 1) x -= 1;
-		if (y % 2 == 1) y -= 1;
-
-		if (z_value < datas[cur_level][y][x]) should_update = false;
-		else if (x < cur_width - 1 && z_value < datas[cur_level][y][x + 1]) should_update = false;
-		else if (y < cur_height - 1 && z_value < datas[cur_level][y + 1][x]) should_update = false;
-		else if (x < cur_width - 1 && y < cur_height - 1 && z_value < datas[cur_level][y + 1][x + 1]) should_update = false;
-
-		x = pos_x;
-		y = pos_y;
 		datas[cur_level][y][x] = z_value;
 
-		if (!should_update) break;
+		//compare neighbours
+		if (x % 2 == 1) x -= 1;
+		if (y % 2 == 1) y -= 1;
+		
+		float next_z = z_value;
+		next_z = fmaxf(next_z, datas[cur_level][y][x]);
+		if (x < cur_width - 1) next_z = fmaxf(next_z, datas[cur_level][y][x + 1]);
+		if (y < cur_height - 1) next_z = fmaxf(next_z, z_value < datas[cur_level][y + 1][x]);
+		if (x < cur_width - 1 && y < cur_height - 1) next_z = fmaxf(next_z, z_value < datas[cur_level][y + 1][x + 1]);
 
 		pos_x = pos_x / 2.f;
 		pos_y = pos_y / 2.f;
+		x = pos_x;
+		y = pos_y;
+		if (datas[cur_level][y][x] == next_z) break;
+
+		z_value = next_z;
 		cur_width = next_width;
 		cur_height = next_height;
 		cur_level++;
