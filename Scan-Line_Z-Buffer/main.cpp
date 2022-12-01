@@ -26,7 +26,7 @@ Camera camera(glm::vec3(0.0f, 0.0f, 10.0f));
 float lastX = (float)SCR_WIDTH / 2.0;
 float lastY = (float)SCR_HEIGHT / 2.0;
 bool firstMouse = true;
-float speed = 0.016f;
+float speed = 0.033f;
 
 void onKeyPress(GLFWwindow* window, int key, int scancode, int action, int mods);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -38,7 +38,7 @@ void init_shader(const char* vertexPath, const char* fragmentPath, GLuint& ID);
 bool if_scan = true;
 
 int main(int argc, char* argv[]) {
-	string model_name = "runtime/model/sphere_group.obj";
+	string model_name = "runtime/model/bunny.obj";
 	if (argc == 2) {
 		model_name = string("runtime/model/") + argv[1] + ".obj";
 	}
@@ -287,8 +287,9 @@ int main(int argc, char* argv[]) {
 		}
 		processInput(window);
 
-		Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
+		//Position = glm::vec3(10 * sinf(toRadians(camera_theta)), 0, 10 * cosf(toRadians(camera_theta)));
 		glm::mat4 world_to_view_mat = glm::lookAt(Position, Target, Up);
+		world_to_view_mat = camera.GetViewMatrix();
 
 		clock_t start, stop;
 		start = clock();
@@ -406,13 +407,15 @@ int main(int argc, char* argv[]) {
 
 		stop = clock();
 		double duration = (double)(stop - start) / CLOCKS_PER_SEC * 1000; //ms
-		std::cout << duration << std::endl;
-		if (camera_theta > 360) {
-			avg_time += duration;
-			frame_cnt++;
-		}
-		camera_theta += STEP;
-		if (camera_theta >= 360 * 2) break;
+		//std::cout << duration << std::endl;
+		string title = "time per frame :" + to_string((int)duration);
+		glfwSetWindowTitle(window, title.data());
+		//if (camera_theta > 60) {
+		//	avg_time += duration;
+		//	frame_cnt++;
+		//}
+		//camera_theta += STEP;
+		//if (camera_theta >= 360 + 60) break;
 
 		//image
 		glBindTexture(GL_TEXTURE_2D, texture);
@@ -468,7 +471,7 @@ int main(int argc, char* argv[]) {
 	glfwTerminate();
 
 
-	std::cout << "average_time = " << avg_time / frame_cnt << std::endl;
+	//std::cout << "average_time = " << avg_time / frame_cnt << std::endl;
 	return 0;
 }
 
